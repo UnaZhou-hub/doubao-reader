@@ -1,0 +1,142 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+    <title>豆包的识字之旅</title>
+    <link rel="stylesheet" href="css/style.css">
+</head>
+<body>
+    <div class="app">
+        <!-- 顶部横幅 -->
+        <header class="hero-banner">
+            <div class="ultraman-icon">⚡</div>
+            <div class="hero-title">豆包的识字之旅</div>
+            <div class="ultraman-icon">⚡</div>
+        </header>
+        <!-- 顶部导航 -->
+        <nav class="nav">
+            <div class="nav-item active" data-page="record">识字记录</div>
+            <div class="nav-item" data-page="wordbank">字库</div>
+            <div class="nav-item" data-page="test">趣味测试</div>
+            <div class="nav-item" data-page="report">水平评测</div>
+        </nav>
+
+        <!-- 页面容器 -->
+        <main class="pages">
+            <!-- 识字记录页 -->
+            <div class="page active" id="page-record">
+                <div class="page-header">
+                    <h2>识字记录</h2>
+                    <div class="stats">已学 <span id="total-count">0</span> 个字</div>
+                </div>
+
+                <div class="today-record">
+                    <h3>今日打卡</h3>
+                    <div class="input-group">
+                        <input type="text" id="word-input" placeholder="输入认识的字，多个用空格分隔" maxlength="100">
+                        <button id="add-btn">添加</button>
+                    </div>
+                </div>
+
+                <div class="recent-words">
+                    <h3>最近学习</h3>
+                    <div id="recent-list" class="word-list"></div>
+                </div>
+
+                <div class="calendar-section">
+                    <h3>学习日历</h3>
+                    <div id="calendar" class="calendar"></div>
+                </div>
+            </div>
+
+            <!-- 字库页 -->
+            <div class="page" id="page-wordbank">
+                <div class="page-header">
+                    <h2>字库管理</h2>
+                    <div class="stats">共 <span id="bank-count">0</span> 个字</div>
+                </div>
+
+                <div class="search-box">
+                    <input type="text" id="search-input" placeholder="搜索汉字...">
+                </div>
+
+                <div id="wordbank-list" class="word-list"></div>
+            </div>
+
+            <!-- 趣味测试页 -->
+            <div class="page" id="page-test">
+                <div class="page-header">
+                    <h2>趣味测试</h2>
+                </div>
+
+                <div class="test-config">
+                    <label>题目数量：</label>
+                    <select id="test-count">
+                        <option value="5">5题</option>
+                        <option value="10" selected>10题</option>
+                        <option value="20">20题</option>
+                    </select>
+                </div>
+
+                <button id="start-test" class="btn-primary">开始测试</button>
+
+                <div id="test-area" class="test-area" style="display: none;">
+                    <div class="progress">
+                        第 <span id="current-question">1</span> / <span id="total-questions">10</span> 题
+                    </div>
+                    <div class="test-word" id="test-word">字</div>
+                    <div class="test-options" id="test-options"></div>
+                </div>
+
+                <div id="test-result" class="test-result" style="display: none;">
+                    <div class="score">得分：<span id="final-score">0</span> / <span id="total-score">0</span></div>
+                    <div class="message" id="result-message"></div>
+                    <button id="restart-test" class="btn-secondary">再来一次</button>
+                </div>
+            </div>
+
+            <!-- 水平评测页 -->
+            <div class="page" id="page-report">
+                <div class="page-header">
+                    <h2>水平评测</h2>
+                </div>
+
+                <div class="report-card">
+                    <div class="report-title">识字量</div>
+                    <div class="report-value"><span id="report-count">0</span> 个</div>
+                </div>
+
+                <div class="report-card">
+                    <div class="report-title">等级评定</div>
+                    <div class="report-value" id="report-level">入门</div>
+                </div>
+
+                <div class="report-card">
+                    <div class="report-title">学习天数</div>
+                    <div class="report-value"><span id="report-days">0</span> 天</div>
+                </div>
+
+                <div class="report-card">
+                    <div class="report-title">平均每日</div>
+                    <div class="report-value"><span id="report-avg">0</span> 个</div>
+                </div>
+
+                <div class="level-guide">
+                    <h3>🦸 奥特曼等级</h3>
+                    <ul>
+                        <li>⚡ 迪迦：1-50字</li>
+                        <li>🔥 赛罗：51-200字</li>
+                        <li>⭐ 梦比优斯：201-500字</li>
+                        <li>💫 贝利亚：501-1000字</li>
+                        <li>🌟 奥特之王：1000字以上</li>
+                    </ul>
+                </div>
+            </div>
+        </main>
+    </div>
+
+    <script src="js/storage.js"></script>
+    <script src="js/app.js"></script>
+</body>
+</html>
