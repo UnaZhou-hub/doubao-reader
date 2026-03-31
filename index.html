@@ -7,20 +7,30 @@
     <link rel="stylesheet" href="css/style.css">
 </head>
 <body>
+    <!-- 流星效果 -->
+    <div class="shooting-star" style="--delay: 0;"></div>
+    <div class="shooting-star" style="--delay: 1;"></div>
+    <div class="shooting-star" style="--delay: 2;"></div>
+
     <div class="app">
         <!-- 顶部横幅 -->
         <header class="hero-banner">
+            <div class="energy-ring"></div>
+            <div class="energy-ring"></div>
+            <div class="energy-ring"></div>
             <div class="ultraman-icon">⚡</div>
             <div class="hero-title">豆包的识字之旅</div>
             <div class="ultraman-icon">⚡</div>
         </header>
 
-        <!-- 顶部导航 -->
+        <!-- 底部导航 -->
         <nav class="nav">
-            <div class="nav-item active" data-page="record">识字记录</div>
-            <div class="nav-item" data-page="wordbank">字库</div>
-            <div class="nav-item" data-page="test">趣味测试</div>
-            <div class="nav-item" data-page="report">水平评测</div>
+            <div class="nav-inner">
+                <div class="nav-item active" data-page="record">识字记录</div>
+                <div class="nav-item" data-page="wordbank">字库</div>
+                <div class="nav-item" data-page="test">趣味测试</div>
+                <div class="nav-item" data-page="report">水平评测</div>
+            </div>
         </nav>
 
         <!-- 页面容器 -->
@@ -29,7 +39,7 @@
             <div class="page active" id="page-record">
                 <div class="page-header">
                     <h2>识字记录</h2>
-                    <div class="stats">已学 <span id="total-count">0</span> 个字</div>
+                    <div class="stats" id="record-stats">已学 <span id="total-count">0</span> 个字</div>
                 </div>
 
                 <div class="today-record">
@@ -43,11 +53,6 @@
                 <div class="recent-words">
                     <h3>最近学习</h3>
                     <div id="recent-list" class="word-list"></div>
-                </div>
-
-                <div class="calendar-section">
-                    <h3>学习日历</h3>
-                    <div id="calendar" class="calendar"></div>
                 </div>
             </div>
 

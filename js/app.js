@@ -5,10 +5,141 @@ class App {
         this.init();
     }
 
-    init() {
+    async init() {
+        // 初始化存储（自动从 localStorage 加载旧数据）
+        await Storage.init();
+
+        // 检查是否有本地文件句柄
+        const hasFileHandle = localStorage.getItem('fileHandle');
+        if (!hasFileHandle && Storage.getTotalWords() > 0) {
+            // 有数据但没有文件句柄，提示用户设置本地文件
+            setTimeout(() => this.setupDataFile(), 1000);
+        } else if (hasFileHandle && Storage.fileHandle) {
+            this.showToast('已加载本地文件');
+        }
+
         this.bindEvents();
         this.updateUI();
-        this.renderCalendar();
+        this.renderAgeInfo();
+    }
+
+    async setupDataFile() {
+        // 创建模态框让用户选择
+        const modal = document.createElement('div');
+        modal.style.cssText = `
+            position: fixed;
+            top: 0;
+            left: 0;
+            right: 0;
+            bottom: 0;
+            background: rgba(0, 0, 0, 0.8);
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            z-index: 2000;
+        `;
+
+        modal.innerHTML = `
+            <div style="
+                background: var(--bg-card);
+                backdrop-filter: blur(20px);
+                padding: 30px;
+                border-radius: 25px;
+                max-width: 400px;
+                text-align: center;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 20px 60px rgba(0, 0, 0, 0.5);
+            ">
+                <div style="font-size: 48px; margin-bottom: 20px;">📁</div>
+                <h2 style="
+                    font-family: 'Orbitron', sans-serif;
+                    font-size: 20px;
+                    margin-bottom: 15px;
+                    background: linear-gradient(135deg, #FF2E93 0%, #FF6B6B 100%);
+                    -webkit-background-clip: text;
+                    -webkit-text-fill-color: transparent;
+                ">设置本地数据文件</h2>
+                <p style="color: var(--text-secondary); margin-bottom: 25px; line-height: 1.6;">
+                    选择一个本地文件保存数据，清除浏览器缓存不会丢失。<br>
+                    <span style="color: #00D4FF;">⚡ 每次关闭自动保存，打开自动加载</span>
+                </p>
+                <div style="display: flex; flex-direction: column; gap: 12px;">
+                    <button id="select-existing" style="
+                        background: linear-gradient(135deg, #00D4FF 0%, #0066FF 100%);
+                        color: white;
+                        padding: 14px 24px;
+                        border: none;
+                        border-radius: 15px;
+                        font-size: 16px;
+                        font-family: 'Fredoka', sans-serif;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">打开已有数据文件</button>
+                    <button id="create-new" style="
+                        background: linear-gradient(135deg, #FF2E93 0%, #FF6B6B 100%);
+                        color: white;
+                        padding: 14px 24px;
+                        border: none;
+                        border-radius: 15px;
+                        font-size: 16px;
+                        font-family: 'Fredoka', sans-serif;
+                        font-weight: 600;
+                        cursor: pointer;
+                    ">创建新文件</button>
+                    <button id="skip" style="
+                        background: rgba(255, 255, 255, 0.1);
+                        color: var(--text-secondary);
+                        padding: 12px 24px;
+                        border: none;
+                        border-radius: 15px;
+                        font-size: 14px;
+                        font-family: 'Fredoka', sans-serif;
+                        font-weight: 500;
+                        cursor: pointer;
+                    ">暂不设置（使用浏览器缓存）</button>
+                </div>
+            </div>
+        `;
+
+        document.body.appendChild(modal);
+
+        return new Promise((resolve) => {
+            document.getElementById('select-existing').onclick = async () => {
+                modal.remove();
+                const success = await Storage.selectDataFile();
+                if (success) {
+                    const wordCount = Storage.getTotalWords();
+                    const studyDays = Storage.getStudyDays();
+                    this.showToast(`已加载 ${wordCount} 个字，${studyDays} 天学习记录`);
+                } else {
+                    this.showToast('使用浏览器缓存模式');
+                }
+                resolve();
+            };
+
+            document.getElementById('create-new').onclick = async () => {
+                modal.remove();
+                const success = await Storage.createNewFile();
+                if (success) {
+                    const wordCount = Storage.getTotalWords();
+                    const studyDays = Storage.getStudyDays();
+                    if (wordCount > 0 || studyDays > 200) {
+                        this.showToast(`已保存 ${wordCount} 个字，${studyDays} 天学习记录`);
+                    } else {
+                        this.showToast('数据文件已创建');
+                    }
+                } else {
+                    this.showToast('使用浏览器缓存模式');
+                }
+                resolve();
+            };
+
+            document.getElementById('skip').onclick = () => {
+                modal.remove();
+                this.showToast('使用浏览器缓存模式，数据仅在本地保存');
+                resolve();
+            };
+        });
     }
 
     bindEvents() {
@@ -106,7 +237,6 @@ class App {
 
         input.value = '';
         this.updateUI();
-        this.renderCalendar();
 
         if (addedCount > 0) {
             this.showToast(`成功添加 ${addedCount} 个字`);
@@ -138,42 +268,15 @@ class App {
         }
     }
 
-    // 日历渲染
-    renderCalendar() {
-        const learnedDates = Storage.getLearnedDates();
-        const container = document.getElementById('calendar');
-        const today = new Date();
-        const currentMonth = today.getMonth();
-        const currentYear = today.getFullYear();
-        const todayStr = today.toLocaleDateString('zh-CN');
+    // 渲染年龄信息
+    renderAgeInfo() {
+        const ageText = Storage.getAgeText();
 
-        // 获取当月第一天和最后一天
-        const firstDay = new Date(currentYear, currentMonth, 1);
-        const lastDay = new Date(currentYear, currentMonth + 1, 0);
-        const startDay = firstDay.getDay(); // 0-6, 0是周日
-
-        let html = '';
-
-        // 填充空白天
-        for (let i = 0; i < startDay; i++) {
-            html += '<div class="calendar-day empty"></div>';
+        // 更新识字记录页的统计信息
+        const statsElement = document.getElementById('record-stats');
+        if (statsElement) {
+            statsElement.innerHTML = `已学 <span id="total-count">${Storage.getTotalWords()}</span> 个字 · ${ageText}`;
         }
-
-        // 填充日期
-        for (let day = 1; day <= lastDay.getDate(); day++) {
-            const date = new Date(currentYear, currentMonth, day);
-            const dateStr = date.toLocaleDateString('zh-CN');
-            const isLearned = learnedDates.includes(dateStr);
-            const isToday = dateStr === todayStr;
-
-            let classes = 'calendar-day';
-            if (isLearned) classes += ' learned';
-            if (isToday) classes += ' today';
-
-            html += `<div class="${classes}">${day}</div>`;
-        }
-
-        container.innerHTML = html;
     }
 
     // 测试功能
@@ -203,38 +306,31 @@ class App {
         document.getElementById('current-question').textContent = this.currentQuestion + 1;
         document.getElementById('test-word').textContent = word;
 
-        // 生成选项（1个正确答案 + 3个干扰项）
-        const allWords = Storage.getWordBank();
-        let options = [word];
-
-        while (options.length < 4 && allWords.length >= 4) {
-            const random = allWords[Math.floor(Math.random() * allWords.length)];
-            if (!options.includes(random)) {
-                options.push(random);
-            }
-        }
-
-        options = this.shuffleArray(options);
-
+        // 显示勾和叉按钮
         const container = document.getElementById('test-options');
-        container.innerHTML = options.map(opt =>
-            `<div class="test-option" onclick="app.checkAnswer('${opt}', '${word}')">${opt}</div>`
-        ).join('');
+        container.innerHTML = `
+            <div class="test-actions">
+                <button class="test-btn test-btn-correct" onclick="app.checkAnswer(true)">
+                    <span class="test-btn-icon">✓</span>
+                    <span class="test-btn-text">认识</span>
+                </button>
+                <button class="test-btn test-btn-wrong" onclick="app.checkAnswer(false)">
+                    <span class="test-btn-icon">✗</span>
+                    <span class="test-btn-text">不认识</span>
+                </button>
+            </div>
+        `;
     }
 
-    checkAnswer(selected, correct) {
-        const options = document.querySelectorAll('.test-option');
-        options.forEach(opt => {
-            opt.onclick = null;
-            if (opt.textContent === correct) {
-                opt.classList.add('correct');
-            } else if (opt.textContent === selected) {
-                opt.classList.add('wrong');
-            }
-        });
+    checkAnswer(isCorrect) {
+        const btns = document.querySelectorAll('.test-btn');
+        btns.forEach(btn => btn.onclick = null);
 
-        if (selected === correct) {
+        if (isCorrect) {
+            document.querySelector('.test-btn-correct').classList.add('selected-correct');
             this.score++;
+        } else {
+            document.querySelector('.test-btn-wrong').classList.add('selected-wrong');
         }
 
         setTimeout(() => {
@@ -244,7 +340,7 @@ class App {
             } else {
                 this.showQuestion();
             }
-        }, 500);
+        }, 600);
     }
 
     showTestResult() {
@@ -273,18 +369,87 @@ class App {
         document.getElementById('report-level').textContent = Storage.getLevel();
         document.getElementById('report-days').textContent = Storage.getStudyDays();
         document.getElementById('report-avg').textContent = Storage.getAvgWordsPerDay();
+
+        // 添加小学水平显示
+        const primaryLevel = Storage.getPrimaryLevel();
+        const primaryLevelText = Storage.getPrimaryLevelText();
+
+        // 在等级评定卡片下方添加小学水平卡片
+        const reportContainer = document.getElementById('page-report');
+        let primaryCard = document.getElementById('primary-level-card');
+
+        if (!primaryCard) {
+            primaryCard = document.createElement('div');
+            primaryCard.id = 'primary-level-card';
+            primaryCard.className = 'report-card';
+            primaryCard.style.cssText = `
+                display: block;
+                background: var(--bg-card);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                padding: 22px;
+                border-radius: 20px;
+                margin-bottom: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            `;
+
+            const levelGuide = document.querySelector('.level-guide');
+            reportContainer.insertBefore(primaryCard, levelGuide);
+        }
+
+        primaryCard.innerHTML = `
+            <div class="report-title" style="font-size: 15px; font-weight: 600; color: var(--text-secondary);">📚 小学水平</div>
+            <div class="report-value" style="font-family: 'Orbitron', sans-serif; font-size: 24px; font-weight: 700; background: linear-gradient(135deg, #00D4FF 0%, #0066FF 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${primaryLevel.name}</div>
+            <div style="font-size: 14px; color: var(--text-secondary); margin-top: 8px;">${primaryLevel.description}</div>
+            <div style="font-size: 13px; color: #FFD93D; margin-top: 6px;">${primaryLevelText}</div>
+            <div style="margin-top: 12px; height: 4px; background: rgba(255, 255, 255, 0.1); border-radius: 2px; overflow: hidden;">
+                <div style="height: 100%; background: linear-gradient(90deg, #FF2E93, #00D4FF); width: ${primaryLevel.progress}%; transition: width 0.5s;"></div>
+            </div>
+            <div style="font-size: 12px; color: var(--text-secondary); margin-top: 4px; text-align: right;">进度: ${Math.round(primaryLevel.progress)}%</div>
+        `;
+
+        // 添加年龄信息
+        let ageCard = document.getElementById('age-info-card');
+        if (!ageCard) {
+            ageCard = document.createElement('div');
+            ageCard.id = 'age-info-card';
+            ageCard.className = 'report-card';
+            ageCard.style.cssText = `
+                display: flex;
+                justify-content: space-between;
+                align-items: center;
+                background: var(--bg-card);
+                backdrop-filter: blur(10px);
+                -webkit-backdrop-filter: blur(10px);
+                padding: 22px;
+                border-radius: 20px;
+                margin-bottom: 16px;
+                border: 1px solid rgba(255, 255, 255, 0.1);
+                box-shadow: 0 10px 40px rgba(0, 0, 0, 0.4);
+            `;
+
+            const levelGuide = document.querySelector('.level-guide');
+            reportContainer.insertBefore(ageCard, levelGuide);
+        }
+
+        const ageText = Storage.getAgeText();
+        const birthday = Storage.getBirthday();
+        const birthdayDate = new Date(birthday);
+        const birthdayText = `${birthdayDate.getFullYear()}年${birthdayDate.getMonth() + 1}月${birthdayDate.getDate()}日`;
+
+        ageCard.innerHTML = `
+            <div>
+                <div class="report-title" style="font-size: 15px; font-weight: 600; color: var(--text-secondary);">👶 豆包年龄</div>
+                <div style="font-size: 13px; color: var(--text-secondary); margin-top: 4px;">🎂 生日: ${birthdayText}</div>
+            </div>
+            <div class="report-value" style="font-family: 'Orbitron', sans-serif; font-size: 28px; font-weight: 700; background: linear-gradient(135deg, #FFD93D 0%, #FF9500 100%); -webkit-background-clip: text; -webkit-text-fill-color: transparent;">${ageText}</div>
+        `;
     }
 
     // 导出数据
     exportData() {
-        const data = {
-            wordBank: Storage.getWordBank(),
-            records: Storage.getAllRecords(),
-            exportDate: new Date().toISOString(),
-            version: '1.0'
-        };
-
-        const jsonString = JSON.stringify(data, null, 2);
+        const jsonString = Storage.exportData();
         const blob = new Blob([jsonString], { type: 'application/json' });
         const url = URL.createObjectURL(blob);
         const a = document.createElement('a');
@@ -305,45 +470,13 @@ class App {
 
         const reader = new FileReader();
         reader.onload = (e) => {
-            try {
-                const data = JSON.parse(e.target.result);
+            const result = Storage.importData(e.target.result);
 
-                // 验证数据格式
-                if (!data.wordBank || !Array.isArray(data.wordBank)) {
-                    throw new Error('数据格式错误');
-                }
-
-                // 询问是否覆盖
-                if (!confirm(`导入将合并数据，当前字库有 ${Storage.getTotalWords()} 个字，导入文件有 ${data.wordBank.length} 个字。确定吗？`)) {
-                    return;
-                }
-
-                // 合并数据
-                let mergedCount = 0;
-                data.wordBank.forEach(word => {
-                    if (Storage.addWord(word)) {
-                        mergedCount++;
-                    }
-                });
-
-                // 合并记录
-                if (data.records) {
-                    const currentRecords = Storage.getAllRecords();
-                    for (const [date, record] of Object.entries(data.records)) {
-                        if (!currentRecords[date]) {
-                            currentRecords[date] = record;
-                        }
-                    }
-                    localStorage.setItem('records', JSON.stringify(currentRecords));
-                }
-
+            if (result.success) {
                 this.updateUI();
-                this.renderCalendar();
-                this.showToast(`导入成功！新增 ${mergedCount} 个字`);
-
-            } catch (err) {
+                        this.showToast(`导入成功！新增 ${result.mergedCount} 个字`);
+            } else {
                 this.showToast('导入失败：文件格式错误');
-                console.error(err);
             }
         };
         reader.readAsText(file);
@@ -370,7 +503,10 @@ class App {
         toast.textContent = message;
         document.body.appendChild(toast);
 
-        setTimeout(() => toast.remove(), 2000);
+        setTimeout(() => {
+            toast.classList.add('hide');
+            setTimeout(() => toast.remove(), 300);
+        }, 2000);
     }
 }
 
