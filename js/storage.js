@@ -74,16 +74,9 @@ const Storage = {
 
     // 获取最近学习的字
     getRecentWords(count = 20) {
-        const records = this.getAllRecords();
-        const dates = Object.keys(records).sort().reverse();
-        const recentWords = [];
-
-        for (const date of dates) {
-            recentWords.push(...records[date].words);
-            if (recentWords.length >= count) break;
-        }
-
-        return recentWords.slice(0, count);
+        const wordBank = this.getWordBank();
+        // 返回最后添加的 count 个字
+        return wordBank.slice(-count).reverse();
     },
 
     // 保存测试分数
