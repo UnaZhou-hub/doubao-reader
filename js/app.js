@@ -30,6 +30,13 @@ class App {
             this.renderWordBank(e.target.value);
         });
 
+        // 导出/导入
+        document.getElementById('export-btn').addEventListener('click', () => this.exportData());
+        document.getElementById('import-btn').addEventListener('click', () => {
+            document.getElementById('import-file').click();
+        });
+        document.getElementById('import-file').addEventListener('change', (e) => this.importData(e));
+
         // 开始测试
         document.getElementById('start-test').addEventListener('click', () => this.startTest());
 
@@ -266,6 +273,83 @@ class App {
         document.getElementById('report-level').textContent = Storage.getLevel();
         document.getElementById('report-days').textContent = Storage.getStudyDays();
         document.getElementById('report-avg').textContent = Storage.getAvgWordsPerDay();
+    }
+
+    // 导出数据
+    exportData() {
+        const data = {
+            wordBank: Storage.getWordBank(),
+            records: Storage.getAllRecords(),
+            exportDate: new Date().toISOString(),
+            version: '1.0'
+        };
+
+        const jsonString = JSON.stringify(data, null, 2);
+        const blob = new Blob([jsonString], { type: 'application/json' });
+        const url = URL.createObjectURL(blob);
+        const a = document.createElement('a');
+        a.href = url;
+        a.download = `豆包识字数据_${new Date().toLocaleDateString('zh-CN')}.json`;
+        document.body.appendChild(a);
+        a.click();
+        document.body.removeChild(a);
+        URL.revokeObjectURL(url);
+
+        this.showToast('导出成功！');
+    }
+
+    // 导入数据
+    importData(event) {
+        const file = event.target.files[0];
+        if (!file) return;
+
+        const reader = new FileReader();
+        reader.onload = (e) => {
+            try {
+                const data = JSON.parse(e.target.result);
+
+                // 验证数据格式
+                if (!data.wordBank || !Array.isArray(data.wordBank)) {
+                    throw new Error('数据格式错误');
+                }
+
+                // 询问是否覆盖
+                if (!confirm(`导入将合并数据，当前字库有 ${Storage.getTotalWords()} 个字，导入文件有 ${data.wordBank.length} 个字。确定吗？`)) {
+                    return;
+                }
+
+                // 合并数据
+                let mergedCount = 0;
+                data.wordBank.forEach(word => {
+                    if (Storage.addWord(word)) {
+                        mergedCount++;
+                    }
+                });
+
+                // 合并记录
+                if (data.records) {
+                    const currentRecords = Storage.getAllRecords();
+                    for (const [date, record] of Object.entries(data.records)) {
+                        if (!currentRecords[date]) {
+                            currentRecords[date] = record;
+                        }
+                    }
+                    localStorage.setItem('records', JSON.stringify(currentRecords));
+                }
+
+                this.updateUI();
+                this.renderCalendar();
+                this.showToast(`导入成功！新增 ${mergedCount} 个字`);
+
+            } catch (err) {
+                this.showToast('导入失败：文件格式错误');
+                console.error(err);
+            }
+        };
+        reader.readAsText(file);
+
+        // 清空文件输入
+        event.target.value = '';
     }
 
     // 工具函数

@@ -319,6 +319,17 @@ button {
     color: #666;
 }
 
+/* 操作按钮 */
+.action-buttons {
+    display: flex;
+    gap: 10px;
+    margin-bottom: 15px;
+}
+
+.action-buttons button {
+    flex: 1;
+}
+
 /* 日历 */
 .calendar-section {
     background: linear-gradient(135deg, #1D3557 0%, #0f1f38 100%);

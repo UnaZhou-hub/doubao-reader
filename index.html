@@ -14,6 +14,7 @@
             <div class="hero-title">豆包的识字之旅</div>
             <div class="ultraman-icon">⚡</div>
         </header>
+
         <!-- 顶部导航 -->
         <nav class="nav">
             <div class="nav-item active" data-page="record">识字记录</div>
@@ -60,6 +61,13 @@
                 <div class="search-box">
                     <input type="text" id="search-input" placeholder="搜索汉字...">
                 </div>
+
+                <div class="action-buttons">
+                    <button id="export-btn" class="btn-secondary">📥 导出</button>
+                    <button id="import-btn" class="btn-secondary">📤 导入</button>
+                </div>
+
+                <input type="file" id="import-file" accept=".json,.txt" style="display: none;">
 
                 <div id="wordbank-list" class="word-list"></div>
             </div>
