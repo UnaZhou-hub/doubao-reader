@@ -6,12 +6,7 @@ const { createClient } = supabase
 const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 function getDeviceId() {
-    let id = localStorage.getItem('device_id')
-    if (!id) {
-        id = crypto.randomUUID()
-        localStorage.setItem('device_id', id)
-    }
-    return id
+    return 'doubao-family'
 }
 
 async function syncToCloud(data) {
