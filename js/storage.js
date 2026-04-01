@@ -1,4 +1,57 @@
-// 本地文件存储管理 - 使用 File System Access API
+// ========== Supabase 云同步配置 ==========
+const SUPABASE_URL = 'https://pcrnnhwkbtbspppovxru.supabase.co'
+const SUPABASE_KEY = 'sb_publishable_t7dgz22Yqd58Dx1isGi1aQ_FWlIlZJ2'
+
+const { createClient } = supabase
+const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY)
+
+function getDeviceId() {
+    let id = localStorage.getItem('device_id')
+    if (!id) {
+        id = crypto.randomUUID()
+        localStorage.setItem('device_id', id)
+    }
+    return id
+}
+
+async function syncToCloud(data) {
+    try {
+        const { error } = await supabaseClient.from('doubao_data').upsert({
+            device_id: getDeviceId(),
+            word_bank: data.wordBank,
+            records: data.records,
+            profile: data.profile,
+            settings: data.settings,
+            updated_at: new Date().toISOString()
+        }, { onConflict: 'device_id' })
+        if (error) console.error('云同步失败:', error)
+        else console.log('已同步到云端')
+    } catch (e) {
+        console.error('云同步异常:', e)
+    }
+}
+
+async function loadFromCloud() {
+    try {
+        const { data, error } = await supabaseClient
+            .from('doubao_data')
+            .select('*')
+            .eq('device_id', getDeviceId())
+            .single()
+        if (error || !data) return null
+        return {
+            wordBank: data.word_bank || [],
+            records: data.records || {},
+            profile: data.profile || {},
+            settings: data.settings || {}
+        }
+    } catch (e) {
+        console.error('从云端加载失败:', e)
+        return null
+    }
+}
+
+// ========== 本地文件存储管理 - 使用 File System Access API ==========
 const Storage = {
     // 数据结构
     data: {
@@ -36,6 +89,25 @@ const Storage = {
             } catch (e) {
                 console.log('文件句柄已失效或不存在');
             }
+        }
+
+        // 从云端加载数据（云端数据优先，字库取最多的那份）
+        const cloudData = await loadFromCloud()
+        if (cloudData) {
+            // 合并字库（取字数更多的）
+            if (cloudData.wordBank.length >= this.data.wordBank.length) {
+                this.data.wordBank = cloudData.wordBank
+            }
+            // 合并记录（云端有的本地没有的补进来）
+            for (const [date, record] of Object.entries(cloudData.records)) {
+                if (!this.data.records[date]) {
+                    this.data.records[date] = record
+                }
+            }
+            if (cloudData.profile && cloudData.profile.birthday) {
+                this.data.profile = { ...this.data.profile, ...cloudData.profile }
+            }
+            console.log('已从云端加载数据')
         }
 
         this.isInitialized = true;
@@ -237,7 +309,7 @@ const Storage = {
         }
     },
 
-    // 同时保存到文件和 localStorage（双重保险）
+    // 同时保存到文件、localStorage 和云端
     async saveAll() {
         // 保存到文件
         if (this.fileHandle) {
@@ -247,6 +319,9 @@ const Storage = {
         // 同时保存到 localStorage 作为备份
         localStorage.setItem('wordBank', JSON.stringify(this.data.wordBank));
         localStorage.setItem('records', JSON.stringify(this.data.records));
+
+        // 同步到云端
+        await syncToCloud(this.data)
     },
 
     // ========== 字库操作 ==========
