@@ -299,11 +299,10 @@ const Storage = {
 
     autoSave() {
         if (this._saveTimeout) {
-            cancelAnimationFrame(this._saveTimeout)
+            clearTimeout(this._saveTimeout)
         }
-        this._saveTimeout = requestAnimationFrame(() => {
-            this.saveAll()
-        })
+        // 立即同步，确保数据不丢失
+        this.saveAll()
     },
 
     async beforeUnload() {
