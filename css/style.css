@@ -1102,3 +1102,542 @@ body {
 .shooting-star {
     animation-delay: var(--delay);
 }
+
+/* ========================================
+   主页迷你头像
+   ======================================== */
+#hero-avatar-mini {
+    display: inline-flex;
+    align-items: center;
+    vertical-align: middle;
+    margin-right: 6px;
+}
+
+/* ========================================
+   豆包头像 + 等级小图标
+   ======================================== */
+.avatar-wrap {
+    position: relative;
+    display: inline-block;
+    flex-shrink: 0;
+}
+
+.avatar-img {
+    border-radius: 50%;
+    border: 2.5px solid;
+    object-fit: cover;
+    display: block;
+}
+
+.avatar-badge {
+    position: absolute;
+    bottom: -4px;
+    right: -4px;
+    border-radius: 50%;
+    border: 2px solid;
+    background: #0A0A1F;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    line-height: 1;
+}
+
+/* ========================================
+   成就页 — 奥特曼等级卡片
+   ======================================== */
+.achievement-hero-card {
+    --hero-color: #A0A0C0;
+    display: flex;
+    align-items: center;
+    gap: 20px;
+    background: var(--bg-card);
+    border: 2px solid var(--hero-color);
+    border-radius: 24px;
+    padding: 22px 20px;
+    margin-bottom: 16px;
+    box-shadow: 0 0 30px color-mix(in srgb, var(--hero-color) 40%, transparent), var(--shadow-card);
+    transition: border-color 0.5s, box-shadow 0.5s;
+}
+
+.hero-avatar {
+    flex-shrink: 0;
+    filter: drop-shadow(0 0 12px var(--hero-color));
+}
+
+.hero-info {
+    flex: 1;
+    min-width: 0;
+}
+
+.hero-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: var(--hero-color);
+    margin-bottom: 4px;
+}
+
+.hero-word-count {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.hero-progress-bar {
+    height: 6px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+    margin-bottom: 6px;
+}
+
+.hero-progress-fill {
+    height: 100%;
+    background: var(--hero-color);
+    border-radius: 3px;
+    transition: width 0.6s cubic-bezier(0.4,0,0.2,1);
+    box-shadow: 0 0 8px var(--hero-color);
+}
+
+.hero-progress-text {
+    font-size: 12px;
+    color: var(--text-secondary);
+}
+
+/* ========================================
+   今日状态 & 识字水平 公共卡片
+   ======================================== */
+.section-title {
+    font-size: 15px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 12px;
+}
+
+.today-status-card,
+.primary-level-card {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 18px 20px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-card);
+}
+
+.today-status-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-secondary);
+    margin-bottom: 8px;
+}
+
+.streak-info {
+    font-size: 14px;
+    color: var(--accent);
+}
+
+.primary-level-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 20px;
+    font-weight: 700;
+    background: var(--gradient-secondary);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    background-clip: text;
+    margin-bottom: 4px;
+}
+
+.primary-level-desc {
+    font-size: 13px;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+}
+
+.primary-progress-bar {
+    height: 5px;
+    background: rgba(255,255,255,0.1);
+    border-radius: 3px;
+    overflow: hidden;
+}
+
+.primary-progress-fill {
+    height: 100%;
+    background: var(--gradient-secondary);
+    border-radius: 3px;
+    transition: width 0.6s;
+}
+
+/* ========================================
+   卡片收集区
+   ======================================== */
+.collection-section {
+    background: var(--bg-card);
+    border-radius: 20px;
+    padding: 18px 16px;
+    margin-bottom: 16px;
+    border: 1px solid rgba(255,255,255,0.1);
+    box-shadow: var(--shadow-card);
+}
+
+.collection-group {
+    margin-bottom: 20px;
+}
+
+.collection-group:last-child {
+    margin-bottom: 0;
+}
+
+.collection-group-title {
+    font-size: 13px;
+    font-weight: 600;
+    color: var(--text-secondary);
+    margin-bottom: 10px;
+    padding-left: 2px;
+}
+
+/* 卡片格子 */
+.card-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(72px, 1fr));
+    gap: 8px;
+}
+
+.card-cell {
+    border-radius: 12px;
+    padding: 8px 4px 6px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 3px;
+    cursor: pointer;
+    transition: transform 0.2s, box-shadow 0.2s;
+    position: relative;
+    min-height: 80px;
+    justify-content: center;
+}
+
+.card-cell-locked {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.card-cell-lock {
+    font-size: 20px;
+    opacity: 0.3;
+}
+
+.card-cell-owned {
+    background: linear-gradient(160deg, rgba(255,255,255,0.08), rgba(0,0,0,0.2));
+    border: 1.5px solid var(--rarity-color);
+    box-shadow: 0 0 10px var(--rarity-glow);
+}
+
+.card-cell-owned:active {
+    transform: scale(0.94);
+}
+
+.card-cell-icon {
+    font-size: 22px;
+    color: var(--hero-color);
+    line-height: 1;
+}
+
+.card-cell-name {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    line-height: 1.3;
+    word-break: break-all;
+}
+
+.card-cell-rarity {
+    font-size: 9px;
+    letter-spacing: -1px;
+}
+
+.card-count-badge {
+    position: absolute;
+    top: 4px;
+    right: 4px;
+    background: var(--rarity-color);
+    color: #000;
+    font-size: 9px;
+    font-weight: 700;
+    padding: 1px 4px;
+    border-radius: 6px;
+    line-height: 1.4;
+}
+
+/* ========================================
+   徽章格子
+   ======================================== */
+.badge-grid {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(80px, 1fr));
+    gap: 10px;
+}
+
+.badge-cell {
+    border-radius: 14px;
+    padding: 10px 6px 8px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 4px;
+    min-height: 90px;
+    justify-content: center;
+}
+
+.badge-unlocked {
+    background: linear-gradient(160deg, rgba(255,255,255,0.1), rgba(0,0,0,0.2));
+    border: 1.5px solid var(--rarity-color);
+    box-shadow: 0 0 14px var(--rarity-glow);
+}
+
+.badge-locked {
+    background: rgba(255,255,255,0.04);
+    border: 1px solid rgba(255,255,255,0.08);
+}
+
+.badge-emoji {
+    font-size: 28px;
+    line-height: 1;
+}
+
+.locked-emoji {
+    opacity: 0.25;
+}
+
+.badge-name {
+    font-size: 10px;
+    color: var(--text-secondary);
+    text-align: center;
+    font-weight: 600;
+}
+
+.badge-date {
+    font-size: 9px;
+    color: var(--text-secondary);
+    opacity: 0.7;
+}
+
+.badge-progress {
+    font-size: 10px;
+    color: var(--text-secondary);
+    opacity: 0.6;
+}
+
+/* ========================================
+   升级遮罩动画
+   ======================================== */
+.levelup-overlay {
+    --hero-color: #FFD93D;
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.85);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 500;
+    animation: overlayIn 0.3s ease;
+}
+
+@keyframes overlayIn {
+    from { opacity: 0; }
+    to   { opacity: 1; }
+}
+
+.levelup-rays {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    pointer-events: none;
+}
+
+.levelup-ray {
+    position: absolute;
+    width: 3px;
+    height: 50vmax;
+    background: linear-gradient(to bottom, var(--hero-color), transparent);
+    transform-origin: top center;
+    transform: rotate(var(--angle));
+    opacity: 0;
+    animation: rayExpand 2.8s ease forwards;
+}
+
+@keyframes rayExpand {
+    0%   { opacity: 0; transform: rotate(var(--angle)) scaleY(0); }
+    20%  { opacity: 0.6; transform: rotate(var(--angle)) scaleY(1); }
+    80%  { opacity: 0.4; }
+    100% { opacity: 0; }
+}
+
+.levelup-content {
+    position: relative;
+    z-index: 2;
+    text-align: center;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 12px;
+    animation: levelupPop 0.5s cubic-bezier(0.68,-0.55,0.265,1.55) 0.2s both;
+}
+
+@keyframes levelupPop {
+    from { transform: scale(0.4); opacity: 0; }
+    to   { transform: scale(1);   opacity: 1; }
+}
+
+.levelup-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 22px;
+    font-weight: 900;
+    color: var(--hero-color);
+    text-shadow: 0 0 30px var(--hero-color);
+}
+
+.levelup-avatar {
+    filter: drop-shadow(0 0 30px var(--hero-color));
+    animation: avatarFloat 1s ease-in-out infinite alternate;
+}
+
+@keyframes avatarFloat {
+    from { transform: translateY(0) scale(1); }
+    to   { transform: translateY(-12px) scale(1.05); }
+}
+
+.levelup-name {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 28px;
+    font-weight: 900;
+    color: var(--hero-color);
+}
+
+.levelup-subtitle {
+    font-size: 15px;
+    color: rgba(255,255,255,0.7);
+}
+
+/* ========================================
+   卡片弹窗
+   ======================================== */
+.card-modal-overlay {
+    position: fixed;
+    inset: 0;
+    background: rgba(0,0,0,0.8);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 600;
+    animation: overlayIn 0.3s ease;
+}
+
+.card-modal {
+    background: var(--bg-card);
+    border: 1px solid rgba(255,255,255,0.15);
+    border-radius: 28px;
+    padding: 28px 24px 24px;
+    width: min(340px, 90vw);
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 16px;
+    animation: levelupPop 0.45s cubic-bezier(0.68,-0.55,0.265,1.55);
+}
+
+.card-modal-title {
+    font-size: 20px;
+    font-weight: 700;
+    color: var(--accent);
+}
+
+.card-display {
+    width: 100%;
+}
+
+.card-display-inner {
+    border-radius: 18px;
+    border: 2px solid;
+    padding: 24px 16px 20px;
+    display: flex;
+    flex-direction: column;
+    align-items: center;
+    gap: 8px;
+    animation: cardReveal 0.6s cubic-bezier(0.68,-0.55,0.265,1.55) 0.1s both;
+}
+
+@keyframes cardReveal {
+    from { transform: scale(0.6) rotateY(90deg); opacity: 0; }
+    to   { transform: scale(1) rotateY(0deg);   opacity: 1; }
+}
+
+.card-top-label {
+    font-size: 11px;
+    font-weight: 700;
+    letter-spacing: 1px;
+    text-transform: uppercase;
+}
+
+.card-center-icon {
+    font-size: 52px;
+    line-height: 1;
+    filter: drop-shadow(0 0 16px currentColor);
+}
+
+.card-hero-name {
+    font-size: 12px;
+    font-weight: 600;
+    opacity: 0.8;
+}
+
+.card-title {
+    font-family: 'Orbitron', sans-serif;
+    font-size: 16px;
+    font-weight: 700;
+    color: white;
+    text-align: center;
+}
+
+.card-stars {
+    font-size: 14px;
+    letter-spacing: 1px;
+}
+
+.card-modal-btn {
+    width: 100%;
+    margin-top: 4px;
+}
+
+/* 卡片详情信息 */
+.card-detail-info {
+    width: 100%;
+    display: flex;
+    flex-direction: column;
+    gap: 8px;
+}
+
+.detail-row {
+    display: flex;
+    justify-content: space-between;
+    font-size: 14px;
+    color: var(--text-secondary);
+    padding: 6px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.06);
+}
+
+.detail-row span:last-child {
+    color: var(--text-primary);
+    font-weight: 500;
+}
+
+.desc-row {
+    justify-content: center;
+    text-align: center;
+    color: var(--text-secondary);
+    font-style: italic;
+    border-bottom: none;
+}
+
