@@ -7,7 +7,7 @@ const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY)
 
 const FAMILY_ID = 'doubao-family'
 
-// ========== 卡片数据 ==========
+// ========== 识字卡片数据（识字闯关卡池）==========
 const CARD_DATA = {
     skill_father_1: { name: '父之光线',    type: 'skill',  hero: 'father', rarity: 'legendary', desc: '奥特之父最强的光线技能' },
     skill_father_2: { name: '父亲披风',    type: 'skill',  hero: 'father', rarity: 'legendary', desc: '能反弹攻击的神奇披风' },
@@ -44,6 +44,22 @@ const CARD_DATA = {
     weapon_geed_2:  { name: '捷德之爪',  type: 'weapon',   hero: 'geed',   rarity: 'common',    desc: '爪型近战武器' },
 }
 
+// ========== 诗词卡片数据（古诗词闯关卡池）==========
+const POEM_CARD_DATA = {
+    skill_tiga_1:    { name: '泽佩利光线',   type: 'skill',  hero: 'tiga',   rarity: 'legendary', desc: '迪迦多重形态的最强光线' },
+    skill_tiga_2:    { name: '天空形态',     type: 'skill',  hero: 'tiga',   rarity: 'epic',      desc: '速度特化的天空形态变身' },
+    skill_tiga_3:    { name: '迪迦飞踢',     type: 'skill',  hero: 'tiga',   rarity: 'rare',      desc: '强力的旋转飞踢' },
+    skill_tiga_4:    { name: '迪迦护盾',     type: 'skill',  hero: 'tiga',   rarity: 'common',    desc: '光能量凝聚而成的防护盾' },
+    skill_mebius_1:  { name: '凤凰勇士光线', type: 'skill',  hero: 'mebius', rarity: 'legendary', desc: '凤凰勇士形态的究极技能' },
+    skill_mebius_2:  { name: '梅比乌斯光线', type: 'skill',  hero: 'mebius', rarity: 'epic',      desc: '梦比优斯的招牌光线技能' },
+    skill_mebius_3:  { name: '梦比优斯刀刃', type: 'skill',  hero: 'mebius', rarity: 'rare',      desc: '手臂变形的锋利刀刃' },
+    skill_mebius_4:  { name: '勇士防护',     type: 'skill',  hero: 'mebius', rarity: 'common',    desc: '由伙伴友情汇聚的防护盾' },
+    weapon_tiga_1:   { name: '迪迦手镯',     type: 'weapon', hero: 'tiga',   rarity: 'epic',      desc: '三种形态变换的神奇手镯' },
+    weapon_tiga_2:   { name: '闪光环',       type: 'weapon', hero: 'tiga',   rarity: 'rare',      desc: '从额头射出的光能量环' },
+    weapon_mebius_1: { name: '梦比优斯手镯', type: 'weapon', hero: 'mebius', rarity: 'epic',      desc: '变身与强化的核心道具' },
+    weapon_mebius_2: { name: '勇士之剑',     type: 'weapon', hero: 'mebius', rarity: 'rare',      desc: '凤凰勇士形态专属圣剑' },
+}
+
 const BADGE_DATA = [
     { id: 'badge_1',  name: '初次胜利', emoji: '🏆', rarity: 'common',    desc: '开启英雄之路',   condition: { type: 'perfect', count: 1 } },
     { id: 'badge_2',  name: '小小英雄', emoji: '🌟', rarity: 'common',    desc: '卡片收藏家',     condition: { type: 'cards',   count: 5 } },
@@ -55,31 +71,37 @@ const BADGE_DATA = [
     { id: 'badge_8',  name: '热血战士', emoji: '🔥', rarity: 'rare',      desc: '勇往直前',       condition: { type: 'tests',   count: 50 } },
     { id: 'badge_9',  name: '宇宙英雄', emoji: '🌌', rarity: 'epic',      desc: '真正的英雄',     condition: { type: 'words',   count: 800 } },
     { id: 'badge_10', name: '传奇之路', emoji: '👑', rarity: 'legendary', desc: '传奇收藏家',     condition: { type: 'cards',   count: 30 } },
+    { id: 'badge_11', name: '诗词初探', emoji: '📜', rarity: 'common',    desc: '踏上诗词之路',   condition: { type: 'poems',   count: 1 } },
+    { id: 'badge_12', name: '诗词达人', emoji: '🎋', rarity: 'rare',      desc: '诗词信手拈来',   condition: { type: 'poems',   count: 10 } },
+    { id: 'badge_13', name: '诗仙弟子', emoji: '🌸', rarity: 'epic',      desc: '光之国诗词传承者', condition: { type: 'poems',   count: 20 } },
 ]
 
 const HERO_CONFIG = {
-    geed:   { _key: 'geed',   name: '捷德',     color: '#E53E3E', subColor: '#1A1A2E', symbol: '○', title: '新生代英雄',     minWords: 200 },
-    ginga:  { _key: 'ginga',  name: '银河',     color: '#C0C0C0', subColor: '#1E3A8A', symbol: '△', title: '未来之光',       minWords: 300 },
-    zero:   { _key: 'zero',   name: '赛罗',     color: '#2563EB', subColor: '#1E1B4B', symbol: '◇', title: '最强战士',       minWords: 400 },
-    ace:    { _key: 'ace',    name: '艾斯',     color: '#DC2626', subColor: '#1E3A5F', symbol: '⌐', title: '光线王',         minWords: 600 },
-    father: { _key: 'father', name: '奥特之父', color: '#D97706', subColor: '#1C1917', symbol: '♛', title: '光之国最高领袖', minWords: 800 },
+    geed:   { _key: 'geed',   name: '捷德',     color: '#E53E3E', subColor: '#1A1A2E', symbol: '○', title: '新生代英雄' },
+    ginga:  { _key: 'ginga',  name: '银河',     color: '#C0C0C0', subColor: '#1E3A8A', symbol: '△', title: '未来之光' },
+    zero:   { _key: 'zero',   name: '赛罗',     color: '#2563EB', subColor: '#1E1B4B', symbol: '◇', title: '最强战士' },
+    ace:    { _key: 'ace',    name: '艾斯',     color: '#DC2626', subColor: '#1E3A5F', symbol: '⌐', title: '光线王' },
+    father: { _key: 'father', name: '奥特之父', color: '#D97706', subColor: '#1C1917', symbol: '♛', title: '光之国最高领袖' },
+    tiga:   { _key: 'tiga',   name: '迪迦',     color: '#9B59B6', subColor: '#2C1654', symbol: '▽', title: '多重形态英雄' },
+    mebius: { _key: 'mebius', name: '梦比优斯', color: '#E67E22', subColor: '#7D1F00', symbol: '❧', title: '凤凰勇士' },
 }
 
 const RARITY_CONFIG = {
-    common:    { name: '普通', color: '#9CA3AF', bg: 'linear-gradient(135deg, #374151, #1F2937)', stars: '★', glow: 'rgba(156,163,175,0.4)' },
-    rare:      { name: '稀有', color: '#3B82F6', bg: 'linear-gradient(135deg, #1D4ED8, #1E3A8A)', stars: '★★', glow: 'rgba(59,130,246,0.5)' },
-    epic:      { name: '史诗', color: '#A855F7', bg: 'linear-gradient(135deg, #7C3AED, #4C1D95)', stars: '★★★', glow: 'rgba(168,85,247,0.6)' },
+    common:    { name: '普通', color: '#9CA3AF', bg: 'linear-gradient(135deg, #374151, #1F2937)', stars: '★',    glow: 'rgba(156,163,175,0.4)' },
+    rare:      { name: '稀有', color: '#3B82F6', bg: 'linear-gradient(135deg, #1D4ED8, #1E3A8A)', stars: '★★',   glow: 'rgba(59,130,246,0.5)' },
+    epic:      { name: '史诗', color: '#A855F7', bg: 'linear-gradient(135deg, #7C3AED, #4C1D95)', stars: '★★★',  glow: 'rgba(168,85,247,0.6)' },
     legendary: { name: '传说', color: '#F59E0B', bg: 'linear-gradient(135deg, #D97706, #92400E)', stars: '★★★★', glow: 'rgba(245,158,11,0.7)' },
 }
 
 // ========== 工具函数 ==========
-function getUltramanLevel(wordCount) {
-    if (wordCount >= 800) return 'father'
-    if (wordCount >= 600) return 'ace'
-    if (wordCount >= 400) return 'zero'
-    if (wordCount >= 300) return 'ginga'
-    if (wordCount >= 200) return 'geed'
-    return null
+
+// 升级需要识字量和古诗词背诵量同时满足
+function getUltramanLevel(wordCount, poemCount = 0) {
+    if (wordCount >= 600 && poemCount >= 20) return 'father'
+    if (wordCount >= 400 && poemCount >= 15) return 'ace'
+    if (wordCount >= 300 && poemCount >= 10) return 'zero'
+    if (wordCount >= 200 && poemCount >= 5)  return 'ginga'
+    return 'geed'
 }
 
 function getTodayStr() {
@@ -96,6 +118,7 @@ async function syncToCloud(data) {
             records: data.records,
             profile: data.profile,
             settings: data.settings,
+            poems: data.poems,
             updated_at: new Date().toISOString()
         }, { onConflict: 'device_id' })
         if (error) console.error('云同步失败:', error)
@@ -117,7 +140,8 @@ async function loadFromCloud() {
             wordBank: data.word_bank || [],
             records: data.records || {},
             profile: data.profile || {},
-            settings: data.settings || {}
+            settings: data.settings || {},
+            poems: data.poems || [],
         }
     } catch (e) {
         console.error('从云端加载失败:', e)
@@ -130,13 +154,15 @@ const Storage = {
     data: {
         wordBank: [],
         records: {},
+        poems: [],
         profile: {
             name: '豆包',
             birthday: '2021-06-22',
-            currentLevel: null,
+            currentLevel: 'geed',
             levelUnlockedAt: null,
             collectedCards: [],
-            lastCardDate: null,
+            lastWordCardDate: null,
+            lastPoemCardDate: null,
             totalTests: 0,
             perfectCount: 0,
             streakDays: 0,
@@ -158,13 +184,20 @@ const Storage = {
             this.data = {
                 wordBank: cloudData.wordBank,
                 records: cloudData.records,
+                poems: cloudData.poems || [],
                 profile: { ...defaultProfile, ...cloudData.profile },
                 settings: { ...this.data.settings, ...cloudData.settings }
             }
+            // 迁移旧的 lastCardDate 字段
+            if (this.data.profile.lastCardDate && !this.data.profile.lastWordCardDate) {
+                this.data.profile.lastWordCardDate = this.data.profile.lastCardDate
+                delete this.data.profile.lastCardDate
+            }
             console.log('已从云端加载数据')
         }
-        // 迁移：currentLevel 始终根据识字量重新计算
-        this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length)
+        // 始终根据识字量和古诗词数量重新计算等级
+        const poemCount = this._getMemorizedPoemCount()
+        this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
         this.isInitialized = true
         return true
     },
@@ -203,13 +236,11 @@ const Storage = {
         }
 
         const newCount = this.data.wordBank.length
-
-        // 更新 streak
         this._updateStreak()
 
-        // 检查升级
+        const poemCount = this._getMemorizedPoemCount()
         const prevLevel = this.data.profile.currentLevel
-        const newLevel = getUltramanLevel(newCount)
+        const newLevel = getUltramanLevel(newCount, poemCount)
         let levelUp = null
         if (newLevel !== prevLevel) {
             this.data.profile.currentLevel = newLevel
@@ -224,19 +255,18 @@ const Storage = {
         if (milestone >= 200 && !milestones.includes(milestone) && newCount >= milestone && prevCount < milestone) {
             milestones.push(milestone)
             this.data.profile.wordMilestones = milestones
-            milestoneCard = this._drawAndAddCard()
+            milestoneCard = this._drawAndAddCard('word')
         }
 
-        // 检查徽章
         const newBadges = this._checkBadges()
-
         this.autoSave()
         return { added: true, levelUp, milestoneCard, newBadges }
     },
 
     removeWord(word) {
         this.data.wordBank = this.data.wordBank.filter(w => w !== word)
-        this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length)
+        const poemCount = this._getMemorizedPoemCount()
+        this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
         this.autoSave()
     },
 
@@ -261,30 +291,69 @@ const Storage = {
         return this.data.records || {}
     },
 
-    // 返回 { isPerfect, cardAwarded, newBadges }
+    // 识字闯关结果，返回 { isPerfect, cardAwarded, newBadges }
     saveTestScore(score, total) {
         const today = this.getToday()
         today.score = { score, total, timestamp: Date.now() }
 
         this.data.profile.totalTests = (this.data.profile.totalTests || 0) + 1
         const isPerfect = score === total
-
-        // 更新 streak
         this._updateStreak()
 
         let cardAwarded = null
         if (isPerfect) {
             this.data.profile.perfectCount = (this.data.profile.perfectCount || 0) + 1
             const todayStr = getTodayStr()
-            if (this.data.profile.lastCardDate !== todayStr) {
-                this.data.profile.lastCardDate = todayStr
-                cardAwarded = this._drawAndAddCard()
+            if (this.data.profile.lastWordCardDate !== todayStr) {
+                this.data.profile.lastWordCardDate = todayStr
+                cardAwarded = this._drawAndAddCard('word')
             }
         }
 
         const newBadges = this._checkBadges()
         this.autoSave()
         return { isPerfect, cardAwarded, newBadges }
+    },
+
+    // 古诗词闯关结果，返回 { isPerfect, cardAwarded, newBadges }
+    savePoemTestScore(score, total, testedPoemIds = []) {
+        this.data.profile.totalTests = (this.data.profile.totalTests || 0) + 1
+        const isPerfect = score === total
+        this._updateStreak()
+
+        let cardAwarded = null
+        if (isPerfect) {
+            this.data.profile.perfectCount = (this.data.profile.perfectCount || 0) + 1
+            const todayStr = getTodayStr()
+            if (this.data.profile.lastPoemCardDate !== todayStr) {
+                this.data.profile.lastPoemCardDate = todayStr
+                cardAwarded = this._drawAndAddCard('poem')
+            }
+            // 标记测试到的诗词为已背诵
+            testedPoemIds.forEach(id => {
+                const poem = this.data.poems.find(p => p.id === id)
+                if (poem) {
+                    poem.status = 'memorized'
+                    poem.lastTestedAt = getTodayStr()
+                }
+            })
+            // 检查是否因诗词数量增加而升级
+            const poemCount = this._getMemorizedPoemCount()
+            const newLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
+            if (newLevel !== this.data.profile.currentLevel) {
+                const prevLevel = this.data.profile.currentLevel
+                this.data.profile.currentLevel = newLevel
+                this.data.profile.levelUnlockedAt = getTodayStr()
+                cardAwarded = cardAwarded // keep card
+                this.autoSave()
+                const newBadges = this._checkBadges()
+                return { isPerfect, cardAwarded, newBadges, levelUp: { from: prevLevel, to: newLevel } }
+            }
+        }
+
+        const newBadges = this._checkBadges()
+        this.autoSave()
+        return { isPerfect, cardAwarded, newBadges, levelUp: null }
     },
 
     getRecentWords(count = 20) {
@@ -298,9 +367,71 @@ const Storage = {
         })
     },
 
+    // ========== 诗词操作 ==========
+
+    getPoems() {
+        return this.data.poems || []
+    },
+
+    searchPoems(keyword) {
+        const poems = this.getPoems()
+        if (!keyword) return poems
+        return poems.filter(p =>
+            p.title.includes(keyword) ||
+            (p.author && p.author.includes(keyword)) ||
+            p.lines.some(l => l.includes(keyword))
+        )
+    },
+
+    addPoem(poemData) {
+        const { title, author, dynasty, content } = poemData
+        if (!title || !content) return { added: false }
+
+        const lines = content.split(/\n/).map(l => l.trim()).filter(l => l.length > 0)
+        if (lines.length < 2) return { added: false, error: '诗词至少需要两句' }
+
+        const poem = {
+            id: Date.now().toString(),
+            title: title.trim(),
+            author: author ? author.trim() : '',
+            dynasty: dynasty ? dynasty.trim() : '',
+            lines,
+            addedAt: getTodayStr(),
+            status: 'learning',
+            lastTestedAt: null,
+            testCount: 0,
+            perfectCount: 0,
+        }
+        this.data.poems.push(poem)
+        this._updateStreak()
+        this.autoSave()
+        return { added: true, poem }
+    },
+
+    deletePoem(id) {
+        this.data.poems = this.data.poems.filter(p => p.id !== id)
+        // 重新计算等级（可能因诗词减少而降级）
+        const poemCount = this._getMemorizedPoemCount()
+        this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
+        this.autoSave()
+    },
+
+    getRecentPoems(count = 5) {
+        return [...this.getPoems()].reverse().slice(0, count)
+    },
+
+    _getMemorizedPoemCount() {
+        return (this.data.poems || []).filter(p => p.status === 'memorized').length
+    },
+
+    getMemorizedPoemCount() {
+        return this._getMemorizedPoemCount()
+    },
+
     // ========== 卡片操作 ==========
 
-    _drawAndAddCard() {
+    // pool: 'word' | 'poem'
+    _drawAndAddCard(pool = 'word') {
         const roll = Math.random() * 100
         let rarity
         if (roll < 5) rarity = 'legendary'
@@ -308,9 +439,10 @@ const Storage = {
         else if (roll < 50) rarity = 'rare'
         else rarity = 'common'
 
-        const pool = Object.keys(CARD_DATA).filter(id => CARD_DATA[id].rarity === rarity)
-        if (pool.length === 0) return null
-        const cardId = pool[Math.floor(Math.random() * pool.length)]
+        const source = pool === 'poem' ? POEM_CARD_DATA : CARD_DATA
+        const candidates = Object.keys(source).filter(id => source[id].rarity === rarity)
+        if (candidates.length === 0) return null
+        const cardId = candidates[Math.floor(Math.random() * candidates.length)]
         this._addCollectedCard(cardId)
         return cardId
     },
@@ -339,6 +471,11 @@ const Storage = {
         return (this.data.profile.collectedCards || []).length
     },
 
+    // 根据 cardId 找卡片数据（同时查两个卡池）
+    getCardData(cardId) {
+        return CARD_DATA[cardId] || POEM_CARD_DATA[cardId] || null
+    },
+
     // ========== 徽章检查 ==========
 
     _checkBadges() {
@@ -357,6 +494,7 @@ const Storage = {
             if (type === 'tests')   met = (profile.totalTests || 0) >= count
             if (type === 'streak')  met = (profile.streakDays || 0) >= count
             if (type === 'cards')   met = (profile.totalCardsCollected || 0) >= count
+            if (type === 'poems')   met = this._getMemorizedPoemCount() >= count
             if (met) {
                 unlocked.push({ id: badge.id, unlockedAt: today })
                 newBadges.push(badge.id)
@@ -375,6 +513,7 @@ const Storage = {
         if (type === 'tests')   current = profile.totalTests || 0
         if (type === 'streak')  current = profile.streakDays || 0
         if (type === 'cards')   current = profile.totalCardsCollected || 0
+        if (type === 'poems')   current = this._getMemorizedPoemCount()
         return { current: Math.min(current, count), total: count }
     },
 
@@ -415,23 +554,32 @@ const Storage = {
         return initialDays + activeDays
     },
 
-    getAvgWordsPerDay() {
-        const total = this.getTotalWords()
-        const days = this.getStudyDays()
-        return days > 0 ? Math.round(total / days) : 0
-    },
-
     // ========== 奥特曼等级 ==========
 
     getUltramanLevel() {
         return this.data.profile.currentLevel
     },
 
+    // 下一个等级需要的进度信息
     getNextLevelInfo() {
-        const count = this.getTotalWords()
-        const thresholds = [200, 300, 400, 600, 800]
-        for (const t of thresholds) {
-            if (count < t) return { needed: t - count, target: t }
+        const wordCount = this.getTotalWords()
+        const poemCount = this._getMemorizedPoemCount()
+        const levels = [
+            { key: 'ginga',  minWords: 200, minPoems: 5 },
+            { key: 'zero',   minWords: 300, minPoems: 10 },
+            { key: 'ace',    minWords: 400, minPoems: 15 },
+            { key: 'father', minWords: 600, minPoems: 20 },
+        ]
+        for (const lvl of levels) {
+            if (wordCount < lvl.minWords || poemCount < lvl.minPoems) {
+                return {
+                    targetKey: lvl.key,
+                    neededWords: Math.max(0, lvl.minWords - wordCount),
+                    neededPoems: Math.max(0, lvl.minPoems - poemCount),
+                    targetWords: lvl.minWords,
+                    targetPoems: lvl.minPoems,
+                }
+            }
         }
         return null // 满级
     },
@@ -440,11 +588,6 @@ const Storage = {
 
     getBirthday() {
         return this.data.profile.birthday
-    },
-
-    setBirthday(birthday) {
-        this.data.profile.birthday = birthday
-        this.autoSave()
     },
 
     getAge() {
@@ -456,17 +599,6 @@ const Storage = {
             age--
         }
         return age
-    },
-
-    getAgeText() {
-        const age = this.getAge()
-        const birthday = new Date(this.data.profile.birthday)
-        const today = new Date()
-        const monthDiff = today.getMonth() - birthday.getMonth()
-        const dayDiff = today.getDate() - birthday.getDate()
-        if (monthDiff < 0 || (monthDiff === 0 && dayDiff < 0)) return `${age}岁`
-        const monthsSince = monthDiff >= 0 ? monthDiff : 0
-        return monthsSince === 0 ? `${age}岁` : `${age}岁${monthsSince}个月`
     },
 
     // ========== 小学水平评估 ==========
@@ -530,9 +662,17 @@ const Storage = {
                     }
                 }
             }
+            if (data.poems && Array.isArray(data.poems)) {
+                data.poems.forEach(poem => {
+                    if (!this.data.poems.find(p => p.id === poem.id)) {
+                        this.data.poems.push(poem)
+                    }
+                })
+            }
             if (data.profile) this.data.profile = { ...this.data.profile, ...data.profile }
             if (data.settings) this.data.settings = { ...this.data.settings, ...data.settings }
-            this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length)
+            const poemCount = this._getMemorizedPoemCount()
+            this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
             this.autoSave()
             return { success: true, mergedCount }
         } catch (e) {
@@ -544,6 +684,7 @@ const Storage = {
     clearAll() {
         this.data.wordBank = []
         this.data.records = {}
+        this.data.poems = []
         this.autoSave()
     },
 

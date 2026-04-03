@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
-    <title>豆包的识字之旅</title>
+    <title>豆包的光之旅程</title>
     <link rel="stylesheet" href="css/style.css">
     <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 </head>
@@ -19,84 +19,159 @@
             <div class="energy-ring"></div>
             <div class="energy-ring"></div>
             <div class="ultraman-icon">⚡</div>
-            <div class="hero-title">豆包的识字之旅</div>
+            <div class="hero-title">豆包的光之旅程</div>
             <div class="ultraman-icon">⚡</div>
         </header>
 
         <!-- 底部导航 -->
         <nav class="nav">
             <div class="nav-inner">
-                <div class="nav-item active" data-page="record">识字记录</div>
-                <div class="nav-item" data-page="wordbank">字库</div>
-                <div class="nav-item" data-page="test">趣味测试</div>
-                <div class="nav-item" data-page="achievement">成就</div>
+                <div class="nav-item active" data-page="record">训练基地</div>
+                <div class="nav-item" data-page="wordbank">百宝箱</div>
+                <div class="nav-item" data-page="test">闯关</div>
+                <div class="nav-item" data-page="achievement">荣耀殿</div>
             </div>
         </nav>
 
         <!-- 页面容器 -->
         <main class="pages">
-            <!-- 识字记录页 -->
+
+            <!-- 训练基地页 -->
             <div class="page active" id="page-record">
                 <div class="page-header">
-                    <h2>识字记录</h2>
+                    <h2>训练基地</h2>
                     <div class="stats" id="record-stats">
                         <span id="hero-avatar-mini"></span>
                         已学 <span id="total-count">0</span> 个字
                     </div>
                 </div>
 
-                <div class="today-record">
-                    <h3>今日打卡</h3>
-                    <div class="input-group">
-                        <input type="text" id="word-input" placeholder="输入认识的字，多个用空格分隔" maxlength="100">
-                        <button id="add-btn">添加</button>
+                <!-- Tab 切换 -->
+                <div class="page-tabs">
+                    <button class="tab-btn active" data-tab="words" onclick="app.switchRecordTab('words')">识字</button>
+                    <button class="tab-btn" data-tab="poems" onclick="app.switchRecordTab('poems')">古诗词</button>
+                </div>
+
+                <!-- 识字 Tab -->
+                <div class="tab-content" id="tab-words">
+                    <div class="today-record">
+                        <h3>今日打卡</h3>
+                        <div class="input-group">
+                            <input type="text" id="word-input" placeholder="输入认识的字，多个用空格分隔" maxlength="100">
+                            <button id="add-btn">添加</button>
+                        </div>
+                    </div>
+                    <div class="recent-words">
+                        <h3>最近学习</h3>
+                        <div id="recent-list" class="word-list"></div>
                     </div>
                 </div>
 
-                <div class="recent-words">
-                    <h3>最近学习</h3>
-                    <div id="recent-list" class="word-list"></div>
+                <!-- 古诗词 Tab -->
+                <div class="tab-content" id="tab-poems" style="display:none;">
+                    <div class="poem-add-section">
+                        <h3>添加诗词</h3>
+                        <div class="poem-form">
+                            <input type="text" id="poem-title" placeholder="诗名" maxlength="50">
+                            <div class="poem-form-row">
+                                <input type="text" id="poem-author" placeholder="作者（可选）" maxlength="20">
+                                <input type="text" id="poem-dynasty" placeholder="朝代（可选）" maxlength="10">
+                            </div>
+                            <textarea id="poem-content" placeholder="诗词内容，每行一句&#10;例如：&#10;床前明月光&#10;疑是地上霜" rows="5"></textarea>
+                            <button id="add-poem-btn" class="btn-primary">添加诗词</button>
+                        </div>
+                    </div>
+                    <div class="recent-poems-section">
+                        <h3>最近添加</h3>
+                        <div id="recent-poem-list"></div>
+                    </div>
                 </div>
             </div>
 
-            <!-- 字库页 -->
+            <!-- 百宝箱页 -->
             <div class="page" id="page-wordbank">
                 <div class="page-header">
-                    <h2>字库管理</h2>
+                    <h2>百宝箱</h2>
                     <div class="stats">共 <span id="bank-count">0</span> 个字</div>
                 </div>
-                <div class="search-box">
-                    <input type="text" id="search-input" placeholder="搜索汉字...">
+
+                <!-- Tab 切换 -->
+                <div class="page-tabs">
+                    <button class="tab-btn active" data-tab="chars" onclick="app.switchBankTab('chars')">汉字</button>
+                    <button class="tab-btn" data-tab="poembank" onclick="app.switchBankTab('poembank')">诗词</button>
                 </div>
-                <div class="action-buttons">
-                    <button id="export-btn" class="btn-secondary">📥 导出</button>
-                    <button id="import-btn" class="btn-secondary">📤 导入</button>
+
+                <!-- 汉字 Tab -->
+                <div class="tab-content" id="tab-chars">
+                    <div class="search-box">
+                        <input type="text" id="search-input" placeholder="搜索汉字...">
+                    </div>
+                    <div class="action-buttons">
+                        <button id="export-btn" class="btn-secondary">📥 导出</button>
+                        <button id="import-btn" class="btn-secondary">📤 导入</button>
+                    </div>
+                    <input type="file" id="import-file" accept=".json,.txt" style="display: none;">
+                    <div id="wordbank-list" class="word-list"></div>
                 </div>
-                <input type="file" id="import-file" accept=".json,.txt" style="display: none;">
-                <div id="wordbank-list" class="word-list"></div>
+
+                <!-- 诗词 Tab -->
+                <div class="tab-content" id="tab-poembank" style="display:none;">
+                    <div class="search-box">
+                        <input type="text" id="poem-search-input" placeholder="搜索诗词...">
+                    </div>
+                    <div id="poem-bank-list"></div>
+                </div>
             </div>
 
-            <!-- 趣味测试页 -->
+            <!-- 闯关页 -->
             <div class="page" id="page-test">
                 <div class="page-header">
-                    <h2>趣味测试</h2>
+                    <h2>闯关</h2>
                 </div>
-                <div class="test-config">
-                    <label>题目数量：</label>
-                    <select id="test-count">
-                        <option value="5">5题</option>
-                        <option value="10" selected>10题</option>
-                        <option value="20">20题</option>
-                    </select>
+
+                <!-- 类型选择 -->
+                <div class="page-tabs" id="test-type-tabs">
+                    <button class="tab-btn active" data-type="word" onclick="app.switchTestType('word')">识字</button>
+                    <button class="tab-btn" data-type="poem" onclick="app.switchTestType('poem')">古诗词</button>
                 </div>
-                <button id="start-test" class="btn-primary">开始测试</button>
+
+                <!-- 识字配置 -->
+                <div id="word-test-setup">
+                    <div class="test-config">
+                        <label>题目数量：</label>
+                        <select id="test-count">
+                            <option value="5">5题</option>
+                            <option value="10" selected>10题</option>
+                            <option value="20">20题</option>
+                        </select>
+                    </div>
+                    <button id="start-test" class="btn-primary">开始闯关</button>
+                </div>
+
+                <!-- 古诗词配置 -->
+                <div id="poem-test-setup" style="display:none;">
+                    <div class="test-config">
+                        <label>题目数量：</label>
+                        <select id="poem-test-count">
+                            <option value="5">5题</option>
+                            <option value="10" selected>10题</option>
+                        </select>
+                    </div>
+                    <button id="start-poem-test" class="btn-primary">开始闯关</button>
+                </div>
+
+                <!-- 测试区域（识字和古诗词共用） -->
                 <div id="test-area" class="test-area" style="display: none;">
                     <div class="progress">
                         第 <span id="current-question">1</span> / <span id="total-questions">10</span> 题
                     </div>
-                    <div class="test-word" id="test-word">字</div>
+                    <!-- 识字题 -->
+                    <div class="test-word" id="test-word" style="display:none;">字</div>
+                    <!-- 古诗词题 -->
+                    <div class="test-poem-question" id="test-poem-question" style="display:none;"></div>
                     <div class="test-options" id="test-options"></div>
                 </div>
+
                 <div id="test-result" class="test-result" style="display: none;">
                     <div class="score">得分：<span id="final-score">0</span> / <span id="total-score">0</span></div>
                     <div class="message" id="result-message"></div>
@@ -104,10 +179,10 @@
                 </div>
             </div>
 
-            <!-- 成就页 -->
+            <!-- 荣耀殿页 -->
             <div class="page" id="page-achievement">
                 <div class="page-header">
-                    <h2>成就</h2>
+                    <h2>荣耀殿</h2>
                 </div>
 
                 <!-- 奥特曼等级卡片 -->
@@ -115,7 +190,10 @@
                     <div class="hero-avatar" id="hero-avatar-main"></div>
                     <div class="hero-info">
                         <div class="hero-name" id="hero-name">光之国学员</div>
-                        <div class="hero-word-count"><span id="hero-word-count">0</span> 字</div>
+                        <div class="hero-stats-row">
+                            <span>已识 <strong id="hero-word-count">0</strong> 字</span>
+                            <span>已背 <strong id="hero-poem-count">0</strong> 首古诗</span>
+                        </div>
                         <div class="hero-progress-bar">
                             <div class="hero-progress-fill" id="hero-progress-fill"></div>
                         </div>
@@ -127,8 +205,8 @@
                 <div class="today-status-card">
                     <div class="section-title">📊 今日状态</div>
                     <div class="today-status-row">
-                        <span>今日测试：<strong id="today-tests">0</strong> 次</span>
-                        <span id="today-card-status">今日卡片：可获取</span>
+                        <span>识字卡片：<span id="today-word-card-status" class="card-status-tag">可获取</span></span>
+                        <span>诗词卡片：<span id="today-poem-card-status" class="card-status-tag">可获取</span></span>
                     </div>
                     <div class="streak-info">🔥 连续学习 <strong id="streak-days">0</strong> 天</div>
                 </div>
@@ -148,12 +226,12 @@
                     <div class="section-title">🎴 卡片收集 <span id="card-count-label"></span></div>
 
                     <div class="collection-group">
-                        <div class="collection-group-title">技能卡片 21 张</div>
+                        <div class="collection-group-title">技能卡 29 张</div>
                         <div class="card-grid" id="skill-cards-grid"></div>
                     </div>
 
                     <div class="collection-group">
-                        <div class="collection-group-title">武器卡片 12 张</div>
+                        <div class="collection-group-title">武器卡 16 张</div>
                         <div class="card-grid" id="weapon-cards-grid"></div>
                     </div>
 
@@ -192,6 +270,24 @@
             <div class="card-display" id="card-detail-card"></div>
             <div class="card-detail-info" id="card-detail-info"></div>
             <button class="btn-secondary card-modal-btn" id="card-detail-close">关闭</button>
+        </div>
+    </div>
+
+    <!-- 徽章详情弹窗 -->
+    <div class="card-modal-overlay" id="badge-detail-overlay" style="display:none;">
+        <div class="card-modal">
+            <div class="badge-detail-content" id="badge-detail-content"></div>
+            <button class="btn-secondary card-modal-btn" id="badge-detail-close">关闭</button>
+        </div>
+    </div>
+
+    <!-- 诗词详情弹窗 -->
+    <div class="card-modal-overlay" id="poem-detail-overlay" style="display:none;">
+        <div class="card-modal poem-detail-modal">
+            <div class="poem-detail-content" id="poem-detail-content"></div>
+            <div class="poem-detail-actions">
+                <button class="btn-secondary card-modal-btn" id="poem-detail-close">关闭</button>
+            </div>
         </div>
     </div>
 

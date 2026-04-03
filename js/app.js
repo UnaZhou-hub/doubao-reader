@@ -2,10 +2,20 @@
 class App {
     constructor() {
         this.currentPage = 'record'
+        this.recordTab = 'words'
+        this.bankTab = 'chars'
+        this.testType = 'word'
+
+        // 识字闯关状态
         this.testWords = []
         this.currentQuestion = 0
         this.score = 0
-        this._cardQueue = [] // 待展示的卡片队列
+
+        // 古诗词闯关状态
+        this.poemQuestions = []   // [{ poemId, promptLine, direction }]
+        this.poemScore = 0
+
+        this._cardQueue = []
         this.init()
     }
 
@@ -16,33 +26,46 @@ class App {
     }
 
     bindEvents() {
+        // 底部导航
         document.querySelectorAll('.nav-item').forEach(item => {
             item.addEventListener('click', (e) => {
                 this.switchPage(e.currentTarget.dataset.page)
             })
         })
 
+        // 识字添加
         document.getElementById('add-btn').addEventListener('click', () => this.addWords())
         document.getElementById('word-input').addEventListener('keypress', (e) => {
             if (e.key === 'Enter') this.addWords()
         })
 
+        // 古诗词添加
+        document.getElementById('add-poem-btn').addEventListener('click', () => this.addPoem())
+
+        // 百宝箱 - 汉字搜索
         document.getElementById('search-input').addEventListener('input', (e) => {
             this.renderWordBank(e.target.value)
         })
+        // 百宝箱 - 诗词搜索
+        document.getElementById('poem-search-input').addEventListener('input', (e) => {
+            this.renderPoemBank(e.target.value)
+        })
 
+        // 导出/导入
         document.getElementById('export-btn').addEventListener('click', () => this.exportData())
         document.getElementById('import-btn').addEventListener('click', () => {
             document.getElementById('import-file').click()
         })
         document.getElementById('import-file').addEventListener('change', (e) => this.importData(e))
 
-        document.getElementById('start-test').addEventListener('click', () => this.startTest())
-        document.getElementById('restart-test').addEventListener('click', () => {
-            document.getElementById('test-result').style.display = 'none'
-            document.getElementById('start-test').style.display = 'block'
-        })
+        // 识字闯关
+        document.getElementById('start-test').addEventListener('click', () => this.startWordTest())
+        document.getElementById('restart-test').addEventListener('click', () => this.resetTest())
 
+        // 古诗词闯关
+        document.getElementById('start-poem-test').addEventListener('click', () => this.startPoemTest())
+
+        // 卡片弹窗
         document.getElementById('card-modal-close').addEventListener('click', () => this._closeCardModal())
         document.getElementById('card-detail-close').addEventListener('click', () => {
             document.getElementById('card-detail-overlay').style.display = 'none'
@@ -50,6 +73,26 @@ class App {
         document.getElementById('card-detail-overlay').addEventListener('click', (e) => {
             if (e.target === document.getElementById('card-detail-overlay')) {
                 document.getElementById('card-detail-overlay').style.display = 'none'
+            }
+        })
+
+        // 徽章详情弹窗
+        document.getElementById('badge-detail-close').addEventListener('click', () => {
+            document.getElementById('badge-detail-overlay').style.display = 'none'
+        })
+        document.getElementById('badge-detail-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('badge-detail-overlay')) {
+                document.getElementById('badge-detail-overlay').style.display = 'none'
+            }
+        })
+
+        // 诗词详情弹窗
+        document.getElementById('poem-detail-close').addEventListener('click', () => {
+            document.getElementById('poem-detail-overlay').style.display = 'none'
+        })
+        document.getElementById('poem-detail-overlay').addEventListener('click', (e) => {
+            if (e.target === document.getElementById('poem-detail-overlay')) {
+                document.getElementById('poem-detail-overlay').style.display = 'none'
             }
         })
     }
@@ -62,7 +105,10 @@ class App {
         document.querySelectorAll('.page').forEach(p => {
             p.classList.toggle('active', p.id === `page-${page}`)
         })
-        if (page === 'wordbank') this.renderWordBank()
+        if (page === 'wordbank') {
+            if (this.bankTab === 'chars') this.renderWordBank()
+            else this.renderPoemBank()
+        }
         if (page === 'achievement') this.renderAchievement()
     }
 
@@ -72,6 +118,40 @@ class App {
         document.getElementById('bank-count').textContent = total
         this.renderMiniAvatar()
         this.renderRecentWords()
+        this.renderRecentPoems()
+    }
+
+    // ========== Tab 切换 ==========
+
+    switchRecordTab(tab) {
+        this.recordTab = tab
+        document.querySelectorAll('#page-record .tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab)
+        })
+        document.getElementById('tab-words').style.display = tab === 'words' ? 'block' : 'none'
+        document.getElementById('tab-poems').style.display = tab === 'poems' ? 'block' : 'none'
+    }
+
+    switchBankTab(tab) {
+        this.bankTab = tab
+        document.querySelectorAll('#page-wordbank .tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.tab === tab)
+        })
+        document.getElementById('tab-chars').style.display = tab === 'chars' ? 'block' : 'none'
+        document.getElementById('tab-poembank').style.display = tab === 'poembank' ? 'block' : 'none'
+        if (tab === 'poembank') this.renderPoemBank()
+        else this.renderWordBank()
+    }
+
+    switchTestType(type) {
+        this.testType = type
+        document.querySelectorAll('#test-type-tabs .tab-btn').forEach(btn => {
+            btn.classList.toggle('active', btn.dataset.type === type)
+        })
+        document.getElementById('word-test-setup').style.display = type === 'word' ? 'block' : 'none'
+        document.getElementById('poem-test-setup').style.display = type === 'poem' ? 'block' : 'none'
+        document.getElementById('test-area').style.display = 'none'
+        document.getElementById('test-result').style.display = 'none'
     }
 
     // ========== 主页迷你头像 ==========
@@ -119,12 +199,11 @@ class App {
             return
         }
 
-        // 升级动画 → 跳转成就页 → 发卡
         if (levelUp) {
             this._showLevelUp(levelUp.to, () => {
                 this.switchPage('achievement')
                 if (milestoneCard) this._queueCard(milestoneCard)
-                else this._drainCardQueue()
+                this._drainCardQueue()
             })
         } else {
             if (milestoneCard) this._queueCard(milestoneCard)
@@ -132,9 +211,35 @@ class App {
         }
     }
 
-    // ========== 测试 ==========
+    // ========== 添加诗词 ==========
 
-    startTest() {
+    addPoem() {
+        const title = document.getElementById('poem-title').value.trim()
+        const author = document.getElementById('poem-author').value.trim()
+        const dynasty = document.getElementById('poem-dynasty').value.trim()
+        const content = document.getElementById('poem-content').value.trim()
+
+        if (!title) { this.showToast('请输入诗名'); return }
+        if (!content) { this.showToast('请输入诗词内容'); return }
+
+        const result = Storage.addPoem({ title, author, dynasty, content })
+        if (!result.added) {
+            this.showToast(result.error || '添加失败，诗词至少需要两句')
+            return
+        }
+
+        document.getElementById('poem-title').value = ''
+        document.getElementById('poem-author').value = ''
+        document.getElementById('poem-dynasty').value = ''
+        document.getElementById('poem-content').value = ''
+
+        this.showToast(`《${title}》已添加！`)
+        this.renderRecentPoems()
+    }
+
+    // ========== 识字闯关 ==========
+
+    startWordTest() {
         const words = Storage.getWordBank()
         const count = parseInt(document.getElementById('test-count').value)
 
@@ -147,70 +252,53 @@ class App {
         this.currentQuestion = 0
         this.score = 0
 
-        document.getElementById('start-test').style.display = 'none'
+        document.getElementById('word-test-setup').style.display = 'none'
         document.getElementById('test-area').style.display = 'block'
+        document.getElementById('test-word').style.display = 'block'
+        document.getElementById('test-poem-question').style.display = 'none'
         document.getElementById('total-questions').textContent = count
-        this.showQuestion()
+        this.showWordQuestion()
     }
 
-    showQuestion() {
+    showWordQuestion() {
         const word = this.testWords[this.currentQuestion]
         document.getElementById('current-question').textContent = this.currentQuestion + 1
         document.getElementById('test-word').textContent = word
-
-        const container = document.getElementById('test-options')
-        container.innerHTML = `
-            <div class="test-actions">
-                <button class="test-btn test-btn-correct" onclick="app.checkAnswer(true)">
-                    <span class="test-btn-icon">✓</span>
-                    <span class="test-btn-text">认识</span>
-                </button>
-                <button class="test-btn test-btn-wrong" onclick="app.checkAnswer(false)">
-                    <span class="test-btn-icon">✗</span>
-                    <span class="test-btn-text">不认识</span>
-                </button>
-            </div>
-        `
+        this._renderAnswerButtons(
+            'app.checkWordAnswer(true)',
+            'app.checkWordAnswer(false)'
+        )
     }
 
-    checkAnswer(isCorrect) {
-        const btns = document.querySelectorAll('.test-btn')
-        btns.forEach(btn => btn.onclick = null)
-
-        if (isCorrect) {
-            document.querySelector('.test-btn-correct').classList.add('selected-correct')
-            this.score++
-        } else {
-            document.querySelector('.test-btn-wrong').classList.add('selected-wrong')
-        }
-
+    checkWordAnswer(isCorrect) {
+        this._lockAnswerButtons(isCorrect)
+        if (isCorrect) this.score++
         setTimeout(() => {
             this.currentQuestion++
             if (this.currentQuestion >= this.testWords.length) {
-                this.showTestResult()
+                this.showWordTestResult()
             } else {
-                this.showQuestion()
+                this.showWordQuestion()
             }
         }, 600)
     }
 
-    showTestResult() {
+    showWordTestResult() {
         const total = this.testWords.length
-        const percentage = Math.round(this.score / total * 100)
-
         document.getElementById('test-area').style.display = 'none'
         document.getElementById('test-result').style.display = 'block'
         document.getElementById('final-score').textContent = this.score
         document.getElementById('total-score').textContent = total
 
         const result = Storage.saveTestScore(this.score, total)
-
         const level = Storage.getUltramanLevel()
-        const heroName = level ? HERO_CONFIG[level].name : '奥特曼'
+        const heroName = HERO_CONFIG[level] ? HERO_CONFIG[level].name : '奥特曼'
+
+        const pct = Math.round(this.score / total * 100)
         let message = ''
-        if (percentage === 100) message = `⚡ 豆包变身！全对！${heroName}为你喝彩！`
-        else if (percentage >= 80) message = `🔥 好样的！${heroName}之力觉醒！`
-        else if (percentage >= 60) message = `⭐ 继续加油！${heroName}与你同在！`
+        if (pct === 100) message = `⚡ 豆包变身！全对！${heroName}为你喝彩！`
+        else if (pct >= 80) message = `🔥 好样的！${heroName}之力觉醒！`
+        else if (pct >= 60) message = `⭐ 继续加油！${heroName}与你同在！`
         else message = '📚 多复习一下，能量快充满了！'
 
         document.getElementById('result-message').textContent = message
@@ -220,11 +308,163 @@ class App {
             this._queueCard(result.cardAwarded)
             this._drainCardQueue()
         } else if (result.isPerfect && !result.cardAwarded) {
-            this.showToast('今日卡片已获取，明天再来！')
+            this.showToast('今日识字卡片已获取，明天再来！')
         }
     }
 
-    // ========== 成就页 ==========
+    // ========== 古诗词闯关 ==========
+
+    startPoemTest() {
+        const poems = Storage.getPoems()
+        if (poems.length === 0) {
+            this.showToast('还没有诗词，先去训练基地添加吧！')
+            return
+        }
+
+        const count = parseInt(document.getElementById('poem-test-count').value)
+        this.poemQuestions = this._buildPoemQuestions(poems, count)
+        this.currentQuestion = 0
+        this.poemScore = 0
+
+        document.getElementById('poem-test-setup').style.display = 'none'
+        document.getElementById('test-area').style.display = 'block'
+        document.getElementById('test-word').style.display = 'none'
+        document.getElementById('test-poem-question').style.display = 'block'
+        document.getElementById('total-questions').textContent = this.poemQuestions.length
+        this.showPoemQuestion()
+    }
+
+    // 生成诗词题目：每个（诗，行，方向）唯一，同一行的 next/prev 不同时出现
+    _buildPoemQuestions(poems, count) {
+        // 先生成每个相邻行对的候选（next 和 prev 视为同一行对，随机选一个方向）
+        const linePairs = []
+        poems.forEach(poem => {
+            if (poem.lines.length < 2) return
+            for (let i = 0; i < poem.lines.length - 1; i++) {
+                linePairs.push({ poem, i })
+            }
+        })
+
+        if (linePairs.length === 0) return []
+
+        // 打乱行对顺序，避免每次都从同一首诗开始
+        const shuffled = this._shuffleArray([...linePairs])
+
+        // 取前 count 个行对，每对随机决定方向
+        const selected = shuffled.slice(0, count)
+        return selected.map(({ poem, i }) => {
+            const useNext = Math.random() < 0.5
+            return useNext
+                ? { poemId: poem.id, poemTitle: poem.title, direction: 'next', promptLine: poem.lines[i],     answerLine: poem.lines[i + 1] }
+                : { poemId: poem.id, poemTitle: poem.title, direction: 'prev', promptLine: poem.lines[i + 1], answerLine: poem.lines[i] }
+        })
+    }
+
+    showPoemQuestion() {
+        const q = this.poemQuestions[this.currentQuestion]
+        document.getElementById('current-question').textContent = this.currentQuestion + 1
+
+        const dirText = q.direction === 'next' ? '接下一句是？' : '上一句是？'
+        document.getElementById('test-poem-question').innerHTML = `
+            <div class="poem-q-title">《${q.poemTitle}》</div>
+            <div class="poem-q-prompt">${q.promptLine}</div>
+            <div class="poem-q-dir">${dirText}</div>
+        `
+        this._renderAnswerButtons(
+            'app.checkPoemAnswer(true)',
+            'app.checkPoemAnswer(false)'
+        )
+    }
+
+    checkPoemAnswer(isCorrect) {
+        this._lockAnswerButtons(isCorrect)
+        if (isCorrect) this.poemScore++
+        setTimeout(() => {
+            this.currentQuestion++
+            if (this.currentQuestion >= this.poemQuestions.length) {
+                this.showPoemTestResult()
+            } else {
+                this.showPoemQuestion()
+            }
+        }, 600)
+    }
+
+    showPoemTestResult() {
+        const total = this.poemQuestions.length
+        document.getElementById('test-area').style.display = 'none'
+        document.getElementById('test-result').style.display = 'block'
+        document.getElementById('final-score').textContent = this.poemScore
+        document.getElementById('total-score').textContent = total
+
+        // 收集本次测试涉及的诗词 ID
+        const testedPoemIds = [...new Set(this.poemQuestions.map(q => q.poemId))]
+        const result = Storage.savePoemTestScore(this.poemScore, total, testedPoemIds)
+
+        const level = Storage.getUltramanLevel()
+        const heroName = HERO_CONFIG[level] ? HERO_CONFIG[level].name : '奥特曼'
+
+        const pct = Math.round(this.poemScore / total * 100)
+        let message = ''
+        if (pct === 100) message = `⚡ 太厉害了！全对！${heroName}被你感动了！`
+        else if (pct >= 80) message = `🔥 好样的！古诗词能量觉醒！`
+        else if (pct >= 60) message = `⭐ 继续背！光之力在成长！`
+        else message = '📜 多多诵读，诗词能量快充满了！'
+
+        document.getElementById('result-message').textContent = message
+        this.updateUI()
+
+        if (result.levelUp) {
+            this._showLevelUp(result.levelUp.to, () => {
+                this.switchPage('achievement')
+                if (result.cardAwarded) this._queueCard(result.cardAwarded)
+                this._drainCardQueue()
+            })
+        } else if (result.isPerfect && result.cardAwarded) {
+            this._queueCard(result.cardAwarded)
+            this._drainCardQueue()
+        } else if (result.isPerfect && !result.cardAwarded) {
+            this.showToast('今日诗词卡片已获取，明天再来！')
+        }
+    }
+
+    resetTest() {
+        document.getElementById('test-result').style.display = 'none'
+        if (this.testType === 'word') {
+            document.getElementById('word-test-setup').style.display = 'block'
+        } else {
+            document.getElementById('poem-test-setup').style.display = 'block'
+        }
+    }
+
+    // ========== 共用答题按钮 ==========
+
+    _renderAnswerButtons(correctFnName, wrongFnName) {
+        const container = document.getElementById('test-options')
+        container.innerHTML = `
+            <div class="test-actions">
+                <button class="test-btn test-btn-correct" onclick="${correctFnName}">
+                    <span class="test-btn-icon">✓</span>
+                    <span class="test-btn-text">会</span>
+                </button>
+                <button class="test-btn test-btn-wrong" onclick="${wrongFnName}">
+                    <span class="test-btn-icon">✗</span>
+                    <span class="test-btn-text">不会</span>
+                </button>
+            </div>
+        `
+    }
+
+    _lockAnswerButtons(isCorrect) {
+        const btns = document.querySelectorAll('.test-btn')
+        btns.forEach(btn => btn.onclick = null)
+        if (isCorrect) {
+            document.querySelector('.test-btn-correct').classList.add('selected-correct')
+        } else {
+            document.querySelector('.test-btn-wrong').classList.add('selected-wrong')
+        }
+    }
+
+    // ========== 荣耀殿 ==========
 
     renderAchievement() {
         this._renderHeroCard()
@@ -237,23 +477,17 @@ class App {
     _renderHeroCard() {
         const level = Storage.getUltramanLevel()
         const wordCount = Storage.getTotalWords()
+        const poemCount = Storage.getMemorizedPoemCount()
         const avatarEl = document.getElementById('hero-avatar-main')
         const nameEl = document.getElementById('hero-name')
-        const countEl = document.getElementById('hero-word-count')
+        const wordCountEl = document.getElementById('hero-word-count')
+        const poemCountEl = document.getElementById('hero-poem-count')
         const fillEl = document.getElementById('hero-progress-fill')
         const textEl = document.getElementById('hero-progress-text')
         const card = document.getElementById('hero-card')
 
-        countEl.textContent = wordCount
-
-        if (!level) {
-            avatarEl.innerHTML = this._buildAvatar(null, 80)
-            nameEl.textContent = '光之国学员'
-            fillEl.style.width = `${(wordCount / 200) * 100}%`
-            textEl.textContent = `还需 ${200 - wordCount} 字解锁捷德`
-            card.style.setProperty('--hero-color', '#A0A0C0')
-            return
-        }
+        wordCountEl.textContent = wordCount
+        poemCountEl.textContent = poemCount
 
         const hero = HERO_CONFIG[level]
         avatarEl.innerHTML = this._buildAvatar(level, 80)
@@ -262,12 +496,14 @@ class App {
 
         const nextInfo = Storage.getNextLevelInfo()
         if (nextInfo) {
-            const thresholds = [200, 300, 400, 600, 800]
-            const idx = thresholds.indexOf(nextInfo.target)
-            const prev = idx > 0 ? thresholds[idx - 1] : 0
-            const pct = ((wordCount - prev) / (nextInfo.target - prev)) * 100
-            fillEl.style.width = `${Math.min(100, pct)}%`
-            textEl.textContent = `还需 ${nextInfo.needed} 字升级`
+            const wordPct = Math.min(100, (wordCount / nextInfo.targetWords) * 100)
+            const poemPct = Math.min(100, (poemCount / nextInfo.targetPoems) * 100)
+            const pct = Math.min(wordPct, poemPct)
+            fillEl.style.width = `${pct}%`
+            const parts = []
+            if (nextInfo.neededWords > 0) parts.push(`再识 ${nextInfo.neededWords} 字`)
+            if (nextInfo.neededPoems > 0) parts.push(`再背 ${nextInfo.neededPoems} 首诗`)
+            textEl.textContent = parts.length > 0 ? `距升级：${parts.join('、')}` : '即将升级！'
         } else {
             fillEl.style.width = '100%'
             textEl.textContent = '🏆 已达最高等级！'
@@ -275,21 +511,20 @@ class App {
     }
 
     _renderTodayStatus() {
-        const records = Storage.getAllRecords()
-        const now = new Date()
-        const todayKey = `${now.getFullYear()}/${now.getMonth() + 1}/${now.getDate()}`
-        const todayRecord = records[todayKey]
-        let todayTests = 0
-        if (todayRecord && todayRecord.score) todayTests = 1
+        const todayStr = getTodayStr()
+        const hasWordCard = Storage.data.profile.lastWordCardDate === todayStr
+        const hasPoemCard = Storage.data.profile.lastPoemCardDate === todayStr
 
-        document.getElementById('today-tests').textContent = todayTests
+        const wordEl = document.getElementById('today-word-card-status')
+        const poemEl = document.getElementById('today-poem-card-status')
+
+        wordEl.textContent = hasWordCard ? '✓ 已获取' : '可获取'
+        wordEl.className = 'card-status-tag ' + (hasWordCard ? 'card-status-done' : 'card-status-open')
+
+        poemEl.textContent = hasPoemCard ? '✓ 已获取' : '可获取'
+        poemEl.className = 'card-status-tag ' + (hasPoemCard ? 'card-status-done' : 'card-status-open')
+
         document.getElementById('streak-days').textContent = Storage.data.profile.streakDays || 0
-
-        const todayStr = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
-        const hasCard = Storage.data.profile.lastCardDate === todayStr
-        document.getElementById('today-card-status').textContent = hasCard
-            ? '今日卡片：✓ 已获取'
-            : '今日卡片：可获取'
     }
 
     _renderPrimaryLevel() {
@@ -301,20 +536,22 @@ class App {
 
     _renderCardGrids() {
         const totalUnique = Storage.getTotalUniqueCards()
-        document.getElementById('card-count-label').textContent = `(${totalUnique}/43)`
+        document.getElementById('card-count-label').textContent = `(${totalUnique}/55)`
 
-        const skillIds = Object.keys(CARD_DATA).filter(id => CARD_DATA[id].type === 'skill')
-        const weaponIds = Object.keys(CARD_DATA).filter(id => CARD_DATA[id].type === 'weapon')
+        // 合并两个卡池，按类型分组
+        const allCards = { ...CARD_DATA, ...POEM_CARD_DATA }
+        const skillIds = Object.keys(allCards).filter(id => allCards[id].type === 'skill')
+        const weaponIds = Object.keys(allCards).filter(id => allCards[id].type === 'weapon')
 
         document.getElementById('skill-cards-grid').innerHTML =
-            skillIds.map(id => this._buildCardCell(id)).join('')
+            skillIds.map(id => this._buildCardCell(id, allCards)).join('')
         document.getElementById('weapon-cards-grid').innerHTML =
-            weaponIds.map(id => this._buildCardCell(id)).join('')
+            weaponIds.map(id => this._buildCardCell(id, allCards)).join('')
     }
 
-    _buildCardCell(cardId) {
+    _buildCardCell(cardId, cardPool) {
         const collected = Storage.getCollectedCard(cardId)
-        const card = CARD_DATA[cardId]
+        const card = cardPool[cardId]
         const rarity = RARITY_CONFIG[card.rarity]
         const hero = HERO_CONFIG[card.hero]
 
@@ -339,22 +576,22 @@ class App {
     _renderBadges() {
         const unlocked = Storage.data.profile.unlockedBadges || []
         const unlockedIds = unlocked.map(b => b.id)
-        document.getElementById('badge-count-label').textContent =
-            `${unlockedIds.length}/10`
+        document.getElementById('badge-count-label').textContent = `${unlockedIds.length}/13`
 
         document.getElementById('badge-grid').innerHTML = BADGE_DATA.map(badge => {
             const isUnlocked = unlockedIds.includes(badge.id)
             const rarity = RARITY_CONFIG[badge.rarity]
             if (isUnlocked) {
                 const record = unlocked.find(b => b.id === badge.id)
-                return `<div class="badge-cell badge-unlocked" style="--rarity-color:${rarity.color};--rarity-glow:${rarity.glow}">
+                return `<div class="badge-cell badge-unlocked" style="--rarity-color:${rarity.color};--rarity-glow:${rarity.glow}"
+                             onclick="app.showBadgeDetail('${badge.id}')">
                     <div class="badge-emoji">${badge.emoji}</div>
                     <div class="badge-name">${badge.name}</div>
                     <div class="badge-date">${record.unlockedAt}</div>
                 </div>`
             } else {
                 const prog = Storage.getBadgeProgress(badge)
-                return `<div class="badge-cell badge-locked">
+                return `<div class="badge-cell badge-locked" onclick="app.showBadgeDetail('${badge.id}')">
                     <div class="badge-emoji locked-emoji">🔒</div>
                     <div class="badge-name">${badge.name}</div>
                     <div class="badge-progress">${prog.current}/${prog.total}</div>
@@ -363,8 +600,43 @@ class App {
         }).join('')
     }
 
+    showBadgeDetail(badgeId) {
+        const badge = BADGE_DATA.find(b => b.id === badgeId)
+        if (!badge) return
+        const unlocked = Storage.data.profile.unlockedBadges || []
+        const record = unlocked.find(b => b.id === badgeId)
+        const rarity = RARITY_CONFIG[badge.rarity]
+        const prog = Storage.getBadgeProgress(badge)
+        const conditionText = this._badgeConditionText(badge)
+
+        document.getElementById('badge-detail-content').innerHTML = `
+            <div class="badge-detail-emoji">${badge.emoji}</div>
+            <div class="badge-detail-name" style="color:${rarity.color}">${badge.name}</div>
+            <div class="badge-detail-rarity" style="color:${rarity.color}">${rarity.name} ${rarity.stars}</div>
+            <div class="badge-detail-desc">${badge.desc}</div>
+            <div class="badge-detail-condition">🎯 ${conditionText}</div>
+            ${record
+                ? `<div class="badge-detail-unlocked">✓ 已于 ${record.unlockedAt} 解锁</div>`
+                : `<div class="badge-detail-progress">当前进度：${prog.current} / ${prog.total}</div>`
+            }
+        `
+        document.getElementById('badge-detail-overlay').style.display = 'flex'
+    }
+
+    _badgeConditionText(badge) {
+        const { type, count } = badge.condition
+        if (type === 'words')   return `认识 ${count} 个字`
+        if (type === 'perfect') return `测试满分 ${count} 次`
+        if (type === 'tests')   return `累计测试 ${count} 次`
+        if (type === 'streak')  return `连续学习 ${count} 天`
+        if (type === 'cards')   return `累计收集 ${count} 张卡片`
+        if (type === 'poems')   return `背诵 ${count} 首古诗词`
+        return ''
+    }
+
     showCardDetail(cardId) {
-        const card = CARD_DATA[cardId]
+        const card = Storage.getCardData(cardId)
+        if (!card) return
         const collected = Storage.getCollectedCard(cardId)
         const rarity = RARITY_CONFIG[card.rarity]
         const hero = HERO_CONFIG[card.hero]
@@ -373,15 +645,86 @@ class App {
             this._buildCardDisplay(cardId, card, rarity, hero)
 
         const typeLabel = card.type === 'skill' ? '技能卡片' : '武器卡片'
+        const pool = POEM_CARD_DATA[cardId] ? '诗词卡池' : '识字卡池'
         document.getElementById('card-detail-info').innerHTML = `
             <div class="detail-row"><span>类型</span><span>${typeLabel}</span></div>
             <div class="detail-row"><span>所属</span><span>${hero.name}</span></div>
             <div class="detail-row"><span>稀有度</span><span style="color:${rarity.color}">${rarity.name} ${rarity.stars}</span></div>
+            <div class="detail-row"><span>卡池</span><span>${pool}</span></div>
             <div class="detail-row desc-row">${card.desc}</div>
             <div class="detail-row"><span>📅 首次获得</span><span>${collected.firstObtainedAt}</span></div>
             <div class="detail-row"><span>📦 获得次数</span><span>${collected.count} 次</span></div>
         `
         document.getElementById('card-detail-overlay').style.display = 'flex'
+    }
+
+    // ========== 诗词渲染 ==========
+
+    renderRecentPoems() {
+        const poems = Storage.getRecentPoems(5)
+        const container = document.getElementById('recent-poem-list')
+        if (!container) return
+        if (poems.length === 0) {
+            container.innerHTML = '<div class="empty">还没有添加诗词，快去添加吧！</div>'
+            return
+        }
+        container.innerHTML = poems.map(poem => this._buildPoemItem(poem)).join('')
+    }
+
+    renderPoemBank(keyword = '') {
+        const poems = Storage.searchPoems(keyword)
+        const container = document.getElementById('poem-bank-list')
+        if (!container) return
+        if (poems.length === 0) {
+            container.innerHTML = `<div class="empty">${keyword ? '没有找到相关诗词' : '还没有诗词，去训练基地添加吧！'}</div>`
+            return
+        }
+        container.innerHTML = [...poems].reverse().map(poem => this._buildPoemItem(poem, true)).join('')
+    }
+
+    _buildPoemItem(poem, showDelete = false) {
+        const statusText = poem.status === 'memorized' ? '✓ 已背诵' : '学习中'
+        const statusClass = poem.status === 'memorized' ? 'poem-status-done' : 'poem-status-learning'
+        const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
+        const deleteBtn = showDelete
+            ? `<button class="poem-delete-btn" onclick="event.stopPropagation();app.deletePoem('${poem.id}')">删除</button>`
+            : ''
+        return `<div class="poem-item" onclick="app.showPoemDetail('${poem.id}')">
+            <div class="poem-item-header">
+                <span class="poem-item-title">📜 ${poem.title}</span>
+                <span class="poem-item-status ${statusClass}">${statusText}</span>
+            </div>
+            ${meta ? `<div class="poem-item-meta">${meta}</div>` : ''}
+            <div class="poem-item-preview">${poem.lines.slice(0, 2).join('，')}${poem.lines.length > 2 ? '…' : ''}</div>
+            ${deleteBtn}
+        </div>`
+    }
+
+    showPoemDetail(poemId) {
+        const poem = Storage.getPoems().find(p => p.id === poemId)
+        if (!poem) return
+        const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
+        const statusText = poem.status === 'memorized' ? '✓ 已背诵' : '学习中'
+        document.getElementById('poem-detail-content').innerHTML = `
+            <div class="poem-detail-title">${poem.title}</div>
+            ${meta ? `<div class="poem-detail-meta">${meta}</div>` : ''}
+            <div class="poem-detail-status">${statusText}</div>
+            <div class="poem-detail-lines">
+                ${poem.lines.map(line => `<div class="poem-detail-line">${line}</div>`).join('')}
+            </div>
+            <div class="poem-detail-date">添加于 ${poem.addedAt}</div>
+        `
+        document.getElementById('poem-detail-overlay').style.display = 'flex'
+    }
+
+    deletePoem(poemId) {
+        const poem = Storage.getPoems().find(p => p.id === poemId)
+        if (!poem) return
+        if (confirm(`确定删除《${poem.title}》吗？`)) {
+            Storage.deletePoem(poemId)
+            this.renderPoemBank()
+            this.showToast('已删除')
+        }
     }
 
     // ========== 升级动画 ==========
@@ -399,7 +742,6 @@ class App {
         overlay.style.setProperty('--hero-color', hero.color)
         overlay.style.display = 'flex'
 
-        // 光芒射线
         const rays = document.getElementById('levelup-rays')
         rays.innerHTML = Array.from({ length: 12 }, (_, i) =>
             `<div class="levelup-ray" style="--angle:${i * 30}deg"></div>`
@@ -425,7 +767,8 @@ class App {
     }
 
     _showCardModal(cardId, onClose) {
-        const card = CARD_DATA[cardId]
+        const card = Storage.getCardData(cardId)
+        if (!card) return
         const rarity = RARITY_CONFIG[card.rarity]
         const hero = HERO_CONFIG[card.hero]
 
@@ -446,14 +789,13 @@ class App {
 
     // ========== SVG 构建 ==========
 
-    // levelKey: 'geed'|'ginga'|'zero'|'ace'|'father'|null
     _buildAvatar(levelKey, size) {
         const LEVEL_ICONS = {
-            geed:   { icon: '🌱', label: 'Lv.1', color: '#E53E3E' },
-            ginga:  { icon: '⭐', label: 'Lv.2', color: '#C0C0C0' },
-            zero:   { icon: '💥', label: 'Lv.3', color: '#2563EB' },
-            ace:    { icon: '⚡', label: 'Lv.4', color: '#DC2626' },
-            father: { icon: '👑', label: 'Lv.5', color: '#D97706' },
+            geed:   { icon: '🌱', color: '#E53E3E' },
+            ginga:  { icon: '⭐', color: '#C0C0C0' },
+            zero:   { icon: '💥', color: '#2563EB' },
+            ace:    { icon: '⚡', color: '#DC2626' },
+            father: { icon: '👑', color: '#D97706' },
         }
 
         const badgeSize = Math.round(size * 0.42)
@@ -477,124 +819,6 @@ class App {
         </div>`
     }
 
-    _buildAvatarSVG(hero, size) {
-        const svgs = {
-            geed: `
-              <!-- 捷德：红黑配色，圆形头盔，圆形头镖 -->
-              <circle cx="50" cy="52" r="44" fill="#1A1A2E"/>
-              <ellipse cx="50" cy="56" rx="32" ry="34" fill="#CC2222"/>
-              <ellipse cx="50" cy="50" rx="24" ry="22" fill="#E8E8E8"/>
-              <!-- 头顶圆形头镖 -->
-              <circle cx="50" cy="16" r="10" fill="#CC2222" stroke="#1A1A2E" stroke-width="2"/>
-              <circle cx="50" cy="16" r="5" fill="#FF4444"/>
-              <rect x="46" y="24" width="8" height="14" rx="2" fill="#CC2222"/>
-              <!-- 奥特曼眼睛（扁长六边形） -->
-              <ellipse cx="36" cy="46" rx="11" ry="6" fill="#FF4444" transform="rotate(-8,36,46)"/>
-              <ellipse cx="64" cy="46" rx="11" ry="6" fill="#FF4444" transform="rotate(8,64,46)"/>
-              <ellipse cx="36" cy="46" rx="7" ry="3.5" fill="#FF8888" transform="rotate(-8,36,46)"/>
-              <ellipse cx="64" cy="46" rx="7" ry="3.5" fill="#FF8888" transform="rotate(8,64,46)"/>
-              <!-- 计时器 -->
-              <ellipse cx="50" cy="64" rx="7" ry="4" fill="#FF4444" stroke="#CC0000" stroke-width="1"/>
-              <ellipse cx="50" cy="64" rx="4" ry="2.5" fill="#FF8888"/>
-              <!-- 脸部纹路 -->
-              <line x1="50" y1="38" x2="50" y2="62" stroke="#CC2222" stroke-width="1.5" opacity="0.4"/>`,
-
-            ginga: `
-              <!-- 银河：银蓝配色，尖角，纤细感 -->
-              <circle cx="50" cy="52" r="44" fill="#1E3A8A"/>
-              <ellipse cx="50" cy="56" rx="30" ry="32" fill="#C0C0C0"/>
-              <ellipse cx="50" cy="50" rx="22" ry="20" fill="#E8E8E8"/>
-              <!-- 尖角 -->
-              <polygon points="50,4 44,22 56,22" fill="#C0C0C0"/>
-              <polygon points="50,8 46,20 54,20" fill="#E0E0E0"/>
-              <!-- 侧翼装饰 -->
-              <polygon points="18,38 30,42 24,55" fill="#C0C0C0" opacity="0.8"/>
-              <polygon points="82,38 70,42 76,55" fill="#C0C0C0" opacity="0.8"/>
-              <!-- 眼睛 -->
-              <ellipse cx="37" cy="46" rx="10" ry="5.5" fill="#3B82F6" transform="rotate(-6,37,46)"/>
-              <ellipse cx="63" cy="46" rx="10" ry="5.5" fill="#3B82F6" transform="rotate(6,63,46)"/>
-              <ellipse cx="37" cy="46" rx="6" ry="3" fill="#93C5FD" transform="rotate(-6,37,46)"/>
-              <ellipse cx="63" cy="46" rx="6" ry="3" fill="#93C5FD" transform="rotate(6,63,46)"/>
-              <!-- 计时器 -->
-              <ellipse cx="50" cy="64" rx="7" ry="4" fill="#3B82F6" stroke="#1D4ED8" stroke-width="1"/>
-              <ellipse cx="50" cy="64" rx="4" ry="2.5" fill="#93C5FD"/>`,
-
-            zero: `
-              <!-- 赛罗：蓝紫配色，双刃头饰 -->
-              <circle cx="50" cy="52" r="44" fill="#1E1B4B"/>
-              <ellipse cx="50" cy="56" rx="32" ry="34" fill="#2563EB"/>
-              <ellipse cx="50" cy="50" rx="24" ry="22" fill="#E8E8E8"/>
-              <!-- 双刃头饰 -->
-              <polygon points="38,24 33,6 43,20" fill="#2563EB"/>
-              <polygon points="62,24 67,6 57,20" fill="#2563EB"/>
-              <polygon points="38,24 34,10 42,21" fill="#60A5FA"/>
-              <polygon points="62,24 66,10 58,21" fill="#60A5FA"/>
-              <!-- 眼睛（赛罗的眼睛更大更有神） -->
-              <ellipse cx="36" cy="45" rx="12" ry="7" fill="#1D4ED8" transform="rotate(-10,36,45)"/>
-              <ellipse cx="64" cy="45" rx="12" ry="7" fill="#1D4ED8" transform="rotate(10,64,45)"/>
-              <ellipse cx="36" cy="44" rx="7" ry="4" fill="#60A5FA" transform="rotate(-10,36,44)"/>
-              <ellipse cx="64" cy="44" rx="7" ry="4" fill="#60A5FA" transform="rotate(10,64,44)"/>
-              <!-- 鼻梁分隔线 -->
-              <line x1="50" y1="36" x2="50" y2="56" stroke="#1E3A8A" stroke-width="2" opacity="0.4"/>
-              <!-- 计时器 -->
-              <ellipse cx="50" cy="65" rx="7" ry="4" fill="#2563EB" stroke="#1D4ED8" stroke-width="1"/>
-              <ellipse cx="50" cy="65" rx="4" ry="2.5" fill="#93C5FD"/>`,
-
-            ace: `
-              <!-- 艾斯：红蓝配色，M型头冠 -->
-              <circle cx="50" cy="52" r="44" fill="#1E3A5F"/>
-              <ellipse cx="50" cy="56" rx="32" ry="34" fill="#DC2626"/>
-              <ellipse cx="50" cy="50" rx="24" ry="22" fill="#E8E8E8"/>
-              <!-- M型头冠 -->
-              <path d="M28,30 L36,12 L44,24 L50,10 L56,24 L64,12 L72,30" fill="none" stroke="#DC2626" stroke-width="5" stroke-linecap="round" stroke-linejoin="round"/>
-              <path d="M28,30 L36,14 L44,24 L50,12 L56,24 L64,14 L72,30" fill="none" stroke="#F87171" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round"/>
-              <!-- 眼睛 -->
-              <ellipse cx="36" cy="46" rx="11" ry="6" fill="#DC2626" transform="rotate(-8,36,46)"/>
-              <ellipse cx="64" cy="46" rx="11" ry="6" fill="#DC2626" transform="rotate(8,64,46)"/>
-              <ellipse cx="36" cy="46" rx="7" ry="3.5" fill="#FCA5A5" transform="rotate(-8,36,46)"/>
-              <ellipse cx="64" cy="46" rx="7" ry="3.5" fill="#FCA5A5" transform="rotate(8,64,46)"/>
-              <!-- 计时器 -->
-              <ellipse cx="50" cy="65" rx="7" ry="4" fill="#DC2626" stroke="#991B1B" stroke-width="1"/>
-              <ellipse cx="50" cy="65" rx="4" ry="2.5" fill="#FCA5A5"/>`,
-
-            father: `
-              <!-- 奥特之父：金色，王冠，威严感 -->
-              <circle cx="50" cy="52" r="44" fill="#1C1917"/>
-              <ellipse cx="50" cy="56" rx="32" ry="34" fill="#B45309"/>
-              <ellipse cx="50" cy="50" rx="24" ry="22" fill="#E8E8E8"/>
-              <!-- 王冠 -->
-              <rect x="30" y="22" width="40" height="10" rx="2" fill="#D97706"/>
-              <polygon points="30,22 34,10 38,22" fill="#D97706"/>
-              <polygon points="46,22 50,8  54,22" fill="#D97706"/>
-              <polygon points="62,22 66,10 70,22" fill="#D97706"/>
-              <rect x="30" y="22" width="40" height="10" rx="2" fill="none" stroke="#FCD34D" stroke-width="1.5"/>
-              <!-- 宝石点缀 -->
-              <circle cx="34" cy="14" r="3" fill="#FCD34D"/>
-              <circle cx="50" cy="11" r="4" fill="#FCD34D"/>
-              <circle cx="66" cy="14" r="3" fill="#FCD34D"/>
-              <!-- 眼睛（金色，更有威严） -->
-              <ellipse cx="36" cy="46" rx="11" ry="6" fill="#D97706" transform="rotate(-6,36,46)"/>
-              <ellipse cx="64" cy="46" rx="11" ry="6" fill="#D97706" transform="rotate(6,64,46)"/>
-              <ellipse cx="36" cy="46" rx="7" ry="3.5" fill="#FCD34D" transform="rotate(-6,36,46)"/>
-              <ellipse cx="64" cy="46" rx="7" ry="3.5" fill="#FCD34D" transform="rotate(6,64,46)"/>
-              <!-- 胡须暗示 -->
-              <line x1="26" y1="60" x2="42" y2="58" stroke="#D97706" stroke-width="1.5" opacity="0.5"/>
-              <line x1="74" y1="60" x2="58" y2="58" stroke="#D97706" stroke-width="1.5" opacity="0.5"/>
-              <!-- 计时器（金色） -->
-              <ellipse cx="50" cy="65" rx="7" ry="4" fill="#D97706" stroke="#92400E" stroke-width="1"/>
-              <ellipse cx="50" cy="65" rx="4" ry="2.5" fill="#FCD34D"/>`,
-        }
-
-        const key = hero._key || ''
-        const body = svgs[key] || ''
-        return `<svg width="${size}" height="${size}" viewBox="0 0 100 100" xmlns="http://www.w3.org/2000/svg">${body}</svg>`
-    }
-
-    _buildPreHeroSVG() {
-        // 已不使用，保留备用
-        return this._buildAvatar(null, 80)
-    }
-
     _buildCardDisplay(cardId, card, rarity, hero) {
         return `<div class="card-display-inner" style="background:${rarity.bg};border-color:${rarity.color};box-shadow:0 0 24px ${rarity.glow}">
             <div class="card-top-label" style="color:${rarity.color}">${rarity.name}</div>
@@ -605,13 +829,13 @@ class App {
         </div>`
     }
 
-    // ========== 字库 ==========
+    // ========== 百宝箱 - 汉字 ==========
 
     renderWordBank(keyword = '') {
         const words = Storage.searchWords(keyword)
         const container = document.getElementById('wordbank-list')
         if (words.length === 0) {
-            container.innerHTML = '<div class="empty">字库空空如也，去识字记录页添加吧！</div>'
+            container.innerHTML = '<div class="empty">字库空空如也，去训练基地添加吧！</div>'
             return
         }
         container.innerHTML = words.map(word =>
@@ -648,7 +872,7 @@ class App {
         const url = URL.createObjectURL(blob)
         const a = document.createElement('a')
         a.href = url
-        a.download = `豆包识字数据_${new Date().toLocaleDateString('zh-CN')}.json`
+        a.download = `豆包学习数据_${new Date().toLocaleDateString('zh-CN')}.json`
         document.body.appendChild(a)
         a.click()
         document.body.removeChild(a)
