@@ -316,7 +316,7 @@ const Storage = {
     },
 
     // 古诗词闯关结果，返回 { isPerfect, cardAwarded, newBadges }
-    savePoemTestScore(score, total, testedPoemIds = []) {
+    savePoemTestScore(score, total) {
         this.data.profile.totalTests = (this.data.profile.totalTests || 0) + 1
         const isPerfect = score === total
         this._updateStreak()
@@ -329,31 +329,11 @@ const Storage = {
                 this.data.profile.lastPoemCardDate = todayStr
                 cardAwarded = this._drawAndAddCard('poem')
             }
-            // 标记测试到的诗词为已背诵
-            testedPoemIds.forEach(id => {
-                const poem = this.data.poems.find(p => p.id === id)
-                if (poem) {
-                    poem.status = 'memorized'
-                    poem.lastTestedAt = getTodayStr()
-                }
-            })
-            // 检查是否因诗词数量增加而升级
-            const poemCount = this._getMemorizedPoemCount()
-            const newLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
-            if (newLevel !== this.data.profile.currentLevel) {
-                const prevLevel = this.data.profile.currentLevel
-                this.data.profile.currentLevel = newLevel
-                this.data.profile.levelUnlockedAt = getTodayStr()
-                cardAwarded = cardAwarded // keep card
-                this.autoSave()
-                const newBadges = this._checkBadges()
-                return { isPerfect, cardAwarded, newBadges, levelUp: { from: prevLevel, to: newLevel } }
-            }
         }
 
         const newBadges = this._checkBadges()
         this.autoSave()
-        return { isPerfect, cardAwarded, newBadges, levelUp: null }
+        return { isPerfect, cardAwarded, newBadges }
     },
 
     getRecentWords(count = 20) {
@@ -397,15 +377,23 @@ const Storage = {
             dynasty: dynasty ? dynasty.trim() : '',
             lines,
             addedAt: getTodayStr(),
-            status: 'learning',
-            lastTestedAt: null,
-            testCount: 0,
-            perfectCount: 0,
         }
+        const prevLevel = this.data.profile.currentLevel
         this.data.poems.push(poem)
         this._updateStreak()
+
+        // 检查是否因诗词数量增加而升级
+        const newLevel = getUltramanLevel(this.data.wordBank.length, this._getMemorizedPoemCount())
+        let levelUp = null
+        if (newLevel !== prevLevel) {
+            this.data.profile.currentLevel = newLevel
+            this.data.profile.levelUnlockedAt = getTodayStr()
+            levelUp = { from: prevLevel, to: newLevel }
+        }
+
+        const newBadges = this._checkBadges()
         this.autoSave()
-        return { added: true, poem }
+        return { added: true, poem, levelUp, newBadges }
     },
 
     updatePoem(id, poemData) {
@@ -436,7 +424,7 @@ const Storage = {
     },
 
     _getMemorizedPoemCount() {
-        return (this.data.poems || []).filter(p => p.status === 'memorized').length
+        return (this.data.poems || []).length
     },
 
     getMemorizedPoemCount() {

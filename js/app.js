@@ -244,6 +244,10 @@ class App {
             this._clearPoemForm()
             this.showToast(`《${title}》已添加！`)
             this.renderRecentPoems()
+            this.updateUI()
+            if (result.levelUp) {
+                this._showLevelUp(result.levelUp.to, () => this.switchPage('achievement'))
+            }
         }
     }
 
@@ -439,8 +443,7 @@ class App {
         document.getElementById('total-score').textContent = total
 
         // 收集本次测试涉及的诗词 ID
-        const testedPoemIds = [...new Set(this.poemQuestions.map(q => q.poemId))]
-        const result = Storage.savePoemTestScore(this.poemScore, total, testedPoemIds)
+        const result = Storage.savePoemTestScore(this.poemScore, total)
 
         const level = Storage.getUltramanLevel()
         const heroName = HERO_CONFIG[level] ? HERO_CONFIG[level].name : '奥特曼'
@@ -725,8 +728,6 @@ class App {
     }
 
     _buildPoemItem(poem, showDelete = false) {
-        const statusText = poem.status === 'memorized' ? '✓ 已背诵' : '学习中'
-        const statusClass = poem.status === 'memorized' ? 'poem-status-done' : 'poem-status-learning'
         const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
         const actionBtns = showDelete ? `
             <div class="poem-action-btns">
@@ -736,7 +737,6 @@ class App {
         return `<div class="poem-item" onclick="app.showPoemDetail('${poem.id}')">
             <div class="poem-item-header">
                 <span class="poem-item-title">📜 ${poem.title}</span>
-                <span class="poem-item-status ${statusClass}">${statusText}</span>
             </div>
             ${meta ? `<div class="poem-item-meta">${meta}</div>` : ''}
             <div class="poem-item-preview">${poem.lines.slice(0, 2).join('，')}${poem.lines.length > 2 ? '…' : ''}</div>
@@ -748,11 +748,9 @@ class App {
         const poem = Storage.getPoems().find(p => p.id === poemId)
         if (!poem) return
         const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
-        const statusText = poem.status === 'memorized' ? '✓ 已背诵' : '学习中'
         document.getElementById('poem-detail-content').innerHTML = `
             <div class="poem-detail-title">${poem.title}</div>
             ${meta ? `<div class="poem-detail-meta">${meta}</div>` : ''}
-            <div class="poem-detail-status">${statusText}</div>
             <div class="poem-detail-lines">
                 ${poem.lines.map(line => `<div class="poem-detail-line">${line}</div>`).join('')}
             </div>
