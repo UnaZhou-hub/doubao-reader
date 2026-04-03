@@ -408,6 +408,21 @@ const Storage = {
         return { added: true, poem }
     },
 
+    updatePoem(id, poemData) {
+        const poem = this.data.poems.find(p => p.id === id)
+        if (!poem) return { updated: false }
+        const { title, author, dynasty, content } = poemData
+        if (!title || !content) return { updated: false }
+        const lines = content.split(/\n/).map(l => l.trim()).filter(l => l.length > 0)
+        if (lines.length < 2) return { updated: false, error: '诗词至少需要两句' }
+        poem.title = title.trim()
+        poem.author = author ? author.trim() : ''
+        poem.dynasty = dynasty ? dynasty.trim() : ''
+        poem.lines = lines
+        this.autoSave()
+        return { updated: true }
+    },
+
     deletePoem(id) {
         this.data.poems = this.data.poems.filter(p => p.id !== id)
         // 重新计算等级（可能因诗词减少而降级）

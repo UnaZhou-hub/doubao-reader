@@ -1991,3 +1991,34 @@ body {
     color: var(--accent);
     text-align: center;
 }
+
+/* ========================================
+   诗词编辑按钮
+   ======================================== */
+
+.poem-edit-btn {
+    width: 100%;
+    margin-top: 12px;
+}
+
+.poem-action-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 8px;
+}
+
+.poem-edit-btn-small {
+    flex: 1;
+    padding: 4px 12px;
+    background: rgba(0, 212, 255, 0.12);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    border-radius: 8px;
+    color: var(--secondary);
+    font-size: 13px;
+    font-family: inherit;
+    cursor: pointer;
+}
+
+.poem-delete-btn {
+    flex: 1;
+}

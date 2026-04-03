@@ -16,6 +16,7 @@ class App {
         this.poemScore = 0
 
         this._cardQueue = []
+        this.editingPoemId = null   // 当前正在编辑的诗词 ID，null 表示新增模式
         this.init()
     }
 
@@ -222,19 +223,60 @@ class App {
         if (!title) { this.showToast('请输入诗名'); return }
         if (!content) { this.showToast('请输入诗词内容'); return }
 
-        const result = Storage.addPoem({ title, author, dynasty, content })
-        if (!result.added) {
-            this.showToast(result.error || '添加失败，诗词至少需要两句')
-            return
+        if (this.editingPoemId) {
+            // 编辑模式
+            const result = Storage.updatePoem(this.editingPoemId, { title, author, dynasty, content })
+            if (!result.updated) {
+                this.showToast(result.error || '保存失败，诗词至少需要两句')
+                return
+            }
+            this._clearPoemForm()
+            this.showToast(`《${title}》已保存！`)
+            this.renderRecentPoems()
+            this.renderPoemBank()
+        } else {
+            // 新增模式
+            const result = Storage.addPoem({ title, author, dynasty, content })
+            if (!result.added) {
+                this.showToast(result.error || '添加失败，诗词至少需要两句')
+                return
+            }
+            this._clearPoemForm()
+            this.showToast(`《${title}》已添加！`)
+            this.renderRecentPoems()
         }
+    }
 
+    editPoem(poemId) {
+        const poem = Storage.getPoems().find(p => p.id === poemId)
+        if (!poem) return
+
+        // 关闭详情弹窗
+        document.getElementById('poem-detail-overlay').style.display = 'none'
+
+        // 切换到训练基地 > 古诗词 tab
+        this.switchPage('record')
+        this.switchRecordTab('poems')
+
+        // 填入表单
+        document.getElementById('poem-title').value = poem.title
+        document.getElementById('poem-author').value = poem.author || ''
+        document.getElementById('poem-dynasty').value = poem.dynasty || ''
+        document.getElementById('poem-content').value = poem.lines.join('\n')
+
+        // 进入编辑模式
+        this.editingPoemId = poemId
+        document.getElementById('add-poem-btn').textContent = '保存修改'
+        document.getElementById('poem-title').focus()
+    }
+
+    _clearPoemForm() {
         document.getElementById('poem-title').value = ''
         document.getElementById('poem-author').value = ''
         document.getElementById('poem-dynasty').value = ''
         document.getElementById('poem-content').value = ''
-
-        this.showToast(`《${title}》已添加！`)
-        this.renderRecentPoems()
+        this.editingPoemId = null
+        document.getElementById('add-poem-btn').textContent = '添加诗词'
     }
 
     // ========== 识字闯关 ==========
@@ -686,9 +728,11 @@ class App {
         const statusText = poem.status === 'memorized' ? '✓ 已背诵' : '学习中'
         const statusClass = poem.status === 'memorized' ? 'poem-status-done' : 'poem-status-learning'
         const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
-        const deleteBtn = showDelete
-            ? `<button class="poem-delete-btn" onclick="event.stopPropagation();app.deletePoem('${poem.id}')">删除</button>`
-            : ''
+        const actionBtns = showDelete ? `
+            <div class="poem-action-btns">
+                <button class="poem-edit-btn-small" onclick="event.stopPropagation();app.editPoem('${poem.id}')">✏️ 编辑</button>
+                <button class="poem-delete-btn" onclick="event.stopPropagation();app.deletePoem('${poem.id}')">删除</button>
+            </div>` : ''
         return `<div class="poem-item" onclick="app.showPoemDetail('${poem.id}')">
             <div class="poem-item-header">
                 <span class="poem-item-title">📜 ${poem.title}</span>
@@ -696,7 +740,7 @@ class App {
             </div>
             ${meta ? `<div class="poem-item-meta">${meta}</div>` : ''}
             <div class="poem-item-preview">${poem.lines.slice(0, 2).join('，')}${poem.lines.length > 2 ? '…' : ''}</div>
-            ${deleteBtn}
+            ${actionBtns}
         </div>`
     }
 
@@ -713,6 +757,7 @@ class App {
                 ${poem.lines.map(line => `<div class="poem-detail-line">${line}</div>`).join('')}
             </div>
             <div class="poem-detail-date">添加于 ${poem.addedAt}</div>
+            <button class="btn-secondary poem-edit-btn" onclick="app.editPoem('${poem.id}')">✏️ 编辑</button>
         `
         document.getElementById('poem-detail-overlay').style.display = 'flex'
     }
