@@ -87,10 +87,7 @@ class App {
             }
         })
 
-        // 诗词详情弹窗
-        document.getElementById('poem-detail-close').addEventListener('click', () => {
-            document.getElementById('poem-detail-overlay').style.display = 'none'
-        })
+        // 诗词详情弹窗：点击遮罩关闭
         document.getElementById('poem-detail-overlay').addEventListener('click', (e) => {
             if (e.target === document.getElementById('poem-detail-overlay')) {
                 document.getElementById('poem-detail-overlay').style.display = 'none'
@@ -731,15 +728,15 @@ class App {
         const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
         const actionBtns = showDelete ? `
             <div class="poem-action-btns">
-                <button class="poem-edit-btn-small" onclick="event.stopPropagation();app.editPoem('${poem.id}')">✏️ 编辑</button>
-                <button class="poem-delete-btn" onclick="event.stopPropagation();app.deletePoem('${poem.id}')">删除</button>
+                <button class="poem-action-btn" onclick="event.stopPropagation();app.editPoem('${poem.id}')">✏️ 编辑</button>
+                <button class="poem-action-btn poem-action-btn--danger" onclick="event.stopPropagation();app.deletePoem('${poem.id}')">🗑 删除</button>
             </div>` : ''
         return `<div class="poem-item" onclick="app.showPoemDetail('${poem.id}')">
             <div class="poem-item-header">
                 <span class="poem-item-title">📜 ${poem.title}</span>
             </div>
             ${meta ? `<div class="poem-item-meta">${meta}</div>` : ''}
-            <div class="poem-item-preview">${poem.lines.slice(0, 2).join('，')}${poem.lines.length > 2 ? '…' : ''}</div>
+            <div class="poem-item-preview">${poem.lines.slice(0, 2).map(l => l.replace(/[，。！？、；：,.!?;:]+$/, '')).join('，')}${poem.lines.length > 2 ? '…' : ''}</div>
             ${actionBtns}
         </div>`
     }
@@ -749,13 +746,18 @@ class App {
         if (!poem) return
         const meta = [poem.dynasty, poem.author].filter(Boolean).join(' · ')
         document.getElementById('poem-detail-content').innerHTML = `
-            <div class="poem-detail-title">${poem.title}</div>
-            ${meta ? `<div class="poem-detail-meta">${meta}</div>` : ''}
+            <div class="poem-detail-header">
+                <div class="poem-detail-title">${poem.title}</div>
+                ${meta ? `<div class="poem-detail-meta">${meta}</div>` : ''}
+            </div>
             <div class="poem-detail-lines">
                 ${poem.lines.map(line => `<div class="poem-detail-line">${line}</div>`).join('')}
             </div>
-            <div class="poem-detail-date">添加于 ${poem.addedAt}</div>
-            <button class="btn-secondary poem-edit-btn" onclick="app.editPoem('${poem.id}')">✏️ 编辑</button>
+            <div class="poem-detail-date">录入于 ${poem.addedAt}</div>
+            <div class="poem-detail-btns">
+                <button class="poem-detail-btn poem-detail-btn--edit" onclick="app.editPoem('${poem.id}')">✏️ 编辑</button>
+                <button class="poem-detail-btn poem-detail-btn--close" onclick="document.getElementById('poem-detail-overlay').style.display='none'">关闭</button>
+            </div>
         `
         document.getElementById('poem-detail-overlay').style.display = 'flex'
     }

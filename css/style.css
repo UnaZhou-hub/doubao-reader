@@ -2022,3 +2022,190 @@ body {
 .poem-delete-btn {
     flex: 1;
 }
+
+/* ========================================
+   诗词列表操作按钮（统一样式）
+   ======================================== */
+
+.poem-action-btns {
+    display: flex;
+    gap: 8px;
+    margin-top: 10px;
+}
+
+.poem-action-btn {
+    flex: 1;
+    padding: 6px 0;
+    border-radius: 8px;
+    font-size: 13px;
+    font-family: inherit;
+    font-weight: 500;
+    cursor: pointer;
+    text-align: center;
+    background: rgba(0, 212, 255, 0.12);
+    border: 1px solid rgba(0, 212, 255, 0.3);
+    color: var(--secondary);
+    transition: opacity 0.15s;
+}
+
+.poem-action-btn--danger {
+    background: rgba(255, 71, 87, 0.12);
+    border-color: rgba(255, 71, 87, 0.3);
+    color: var(--danger);
+}
+
+.poem-action-btn:active {
+    opacity: 0.7;
+}
+
+/* ========================================
+   诗词详情弹窗 重设计
+   ======================================== */
+
+.poem-detail-modal {
+    background: linear-gradient(160deg, #0f0f2e 0%, #1a1035 100%);
+    border: 1px solid rgba(255, 217, 61, 0.25);
+    border-top: 3px solid var(--accent);
+    border-radius: 24px;
+    padding: 28px 24px 24px;
+    width: min(360px, 92vw);
+    max-height: 82vh;
+    overflow-y: auto;
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    box-shadow: 0 20px 60px rgba(0,0,0,0.6), 0 0 40px rgba(255,217,61,0.08);
+    animation: levelupPop 0.35s cubic-bezier(0.34, 1.56, 0.64, 1);
+}
+
+.poem-detail-header {
+    text-align: center;
+    margin-bottom: 20px;
+}
+
+.poem-detail-deco {
+    font-size: 11px;
+    letter-spacing: 6px;
+    color: var(--accent);
+    opacity: 0.6;
+    margin-bottom: 10px;
+}
+
+.poem-detail-title {
+    font-size: 22px;
+    font-weight: 700;
+    color: var(--text-primary);
+    letter-spacing: 3px;
+    margin-bottom: 6px;
+}
+
+.poem-detail-meta {
+    font-size: 13px;
+    color: var(--text-secondary);
+    letter-spacing: 1px;
+}
+
+.poem-detail-lines {
+    display: flex;
+    flex-direction: column;
+    gap: 0;
+    background: rgba(255,255,255,0.03);
+    border-radius: 14px;
+    padding: 16px 12px;
+    margin-bottom: 14px;
+}
+
+.poem-detail-line {
+    font-size: 19px;
+    color: var(--text-primary);
+    text-align: center;
+    letter-spacing: 4px;
+    padding: 9px 0;
+    border-bottom: 1px solid rgba(255,255,255,0.05);
+    line-height: 1.5;
+}
+
+.poem-detail-line:last-child {
+    border-bottom: none;
+}
+
+.poem-detail-date {
+    font-size: 11px;
+    color: rgba(160,160,192,0.5);
+    text-align: center;
+    margin-bottom: 18px;
+}
+
+.poem-detail-btns {
+    display: flex;
+    gap: 10px;
+}
+
+.poem-detail-btn {
+    flex: 1;
+    padding: 11px 0;
+    border-radius: 12px;
+    font-size: 14px;
+    font-family: inherit;
+    font-weight: 600;
+    cursor: pointer;
+    text-align: center;
+    transition: opacity 0.15s, transform 0.1s;
+}
+
+.poem-detail-btn:active {
+    opacity: 0.75;
+    transform: scale(0.97);
+}
+
+.poem-detail-btn--edit {
+    background: rgba(0, 212, 255, 0.12);
+    border: 1px solid rgba(0, 212, 255, 0.35);
+    color: var(--secondary);
+}
+
+.poem-detail-btn--close {
+    background: rgba(255,255,255,0.06);
+    border: 1px solid rgba(255,255,255,0.12);
+    color: var(--text-secondary);
+}
+
+/* 诗词弹窗紧凑版覆盖 */
+.poem-detail-modal {
+    padding: 20px 20px 18px;
+    gap: 0;
+    max-height: 90vh;
+    overflow: hidden;
+}
+
+.poem-detail-header {
+    margin-bottom: 12px;
+}
+
+.poem-detail-deco {
+    display: none;
+}
+
+.poem-detail-title {
+    font-size: 20px;
+    margin-bottom: 4px;
+}
+
+.poem-detail-lines {
+    padding: 10px 10px;
+    margin-bottom: 10px;
+}
+
+.poem-detail-line {
+    font-size: 17px;
+    padding: 7px 0;
+    letter-spacing: 3px;
+}
+
+.poem-detail-date {
+    margin-bottom: 12px;
+}
+
+.poem-detail-btn {
+    padding: 9px 0;
+}
