@@ -111,9 +111,21 @@ class App {
     }
 
     updateUI() {
-        const total = Storage.getTotalWords()
-        document.getElementById('total-count').textContent = total
-        document.getElementById('bank-count').textContent = total
+        // 根据当前 tab 决定显示什么
+        const totalCountEl = document.getElementById('total-count')
+        const recordUnitEl = document.getElementById('record-unit')
+
+        if (this.recordTab === 'words') {
+            const total = Storage.getTotalWords()
+            totalCountEl.textContent = total
+            recordUnitEl.textContent = '个字'
+        } else {
+            const poemCount = Storage.getMemorizedPoemCount()
+            totalCountEl.textContent = poemCount
+            recordUnitEl.textContent = '首诗'
+        }
+
+        document.getElementById('bank-count').textContent = Storage.getTotalWords()
         this.renderMiniAvatar()
         this.renderRecentWords()
         this.renderRecentPoems()
@@ -128,6 +140,17 @@ class App {
         })
         document.getElementById('tab-words').style.display = tab === 'words' ? 'block' : 'none'
         document.getElementById('tab-poems').style.display = tab === 'poems' ? 'block' : 'none'
+
+        // 更新状态显示
+        const totalCountEl = document.getElementById('total-count')
+        const recordUnitEl = document.getElementById('record-unit')
+        if (tab === 'words') {
+            totalCountEl.textContent = Storage.getTotalWords()
+            recordUnitEl.textContent = '个字'
+        } else {
+            totalCountEl.textContent = Storage.getMemorizedPoemCount()
+            recordUnitEl.textContent = '首诗'
+        }
     }
 
     switchBankTab(tab) {
@@ -542,10 +565,15 @@ class App {
             const poemPct = Math.min(100, (poemCount / nextInfo.targetPoems) * 100)
             const pct = Math.min(wordPct, poemPct)
             fillEl.style.width = `${pct}%`
+
             const parts = []
             if (nextInfo.neededWords > 0) parts.push(`再识 ${nextInfo.neededWords} 字`)
             if (nextInfo.neededPoems > 0) parts.push(`再背 ${nextInfo.neededPoems} 首诗`)
-            textEl.textContent = parts.length > 0 ? `距升级：${parts.join('、')}` : '即将升级！'
+            if (parts.length > 0) {
+                textEl.textContent = `距升级：${parts.join('，')}`
+            } else {
+                textEl.textContent = '即将升级！'
+            }
         } else {
             fillEl.style.width = '100%'
             textEl.textContent = '🏆 已达最高等级！'

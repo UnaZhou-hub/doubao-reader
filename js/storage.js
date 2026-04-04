@@ -567,24 +567,40 @@ const Storage = {
     getNextLevelInfo() {
         const wordCount = this.getTotalWords()
         const poemCount = this._getMemorizedPoemCount()
+
+        // 等级列表（按从低到高排序）
         const levels = [
+            { key: 'geed',   minWords: 0,   minPoems: 0 },
             { key: 'ginga',  minWords: 200, minPoems: 5 },
             { key: 'zero',   minWords: 300, minPoems: 10 },
             { key: 'ace',    minWords: 400, minPoems: 15 },
             { key: 'father', minWords: 600, minPoems: 20 },
         ]
-        for (const lvl of levels) {
-            if (wordCount < lvl.minWords || poemCount < lvl.minPoems) {
-                return {
-                    targetKey: lvl.key,
-                    neededWords: Math.max(0, lvl.minWords - wordCount),
-                    neededPoems: Math.max(0, lvl.minPoems - poemCount),
-                    targetWords: lvl.minWords,
-                    targetPoems: lvl.minPoems,
-                }
+
+        // 先找到当前等级
+        let currentLevelIndex = 0
+        for (let i = levels.length - 1; i >= 0; i--) {
+            const lvl = levels[i]
+            if (wordCount >= lvl.minWords && poemCount >= lvl.minPoems) {
+                currentLevelIndex = i
+                break
             }
         }
-        return null // 满级
+
+        // 下一个等级
+        const nextIndex = currentLevelIndex + 1
+        if (nextIndex >= levels.length) {
+            return null // 满级
+        }
+
+        const next = levels[nextIndex]
+        return {
+            targetKey: next.key,
+            neededWords: Math.max(0, next.minWords - wordCount),
+            neededPoems: Math.max(0, next.minPoems - poemCount),
+            targetWords: next.minWords,
+            targetPoems: next.minPoems,
+        }
     },
 
     // ========== 年龄计算 ==========
