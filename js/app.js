@@ -125,7 +125,17 @@ class App {
             recordUnitEl.textContent = '首诗'
         }
 
-        document.getElementById('bank-count').textContent = Storage.getTotalWords()
+        // 更新百宝箱统计（根据当前 tab）
+        const bankCountEl = document.getElementById('bank-count')
+        const bankUnitEl = document.getElementById('bank-unit')
+        if (this.bankTab === 'chars') {
+            bankCountEl.textContent = Storage.getTotalWords()
+            bankUnitEl.textContent = '个字'
+        } else {
+            bankCountEl.textContent = Storage.getMemorizedPoemCount()
+            bankUnitEl.textContent = '首诗词'
+        }
+
         this.renderMiniAvatar()
         this.renderRecentWords()
         this.renderRecentPoems()
@@ -160,6 +170,18 @@ class App {
         })
         document.getElementById('tab-chars').style.display = tab === 'chars' ? 'block' : 'none'
         document.getElementById('tab-poembank').style.display = tab === 'poembank' ? 'block' : 'none'
+
+        // 更新统计显示
+        const bankCountEl = document.getElementById('bank-count')
+        const bankUnitEl = document.getElementById('bank-unit')
+        if (tab === 'chars') {
+            bankCountEl.textContent = Storage.getTotalWords()
+            bankUnitEl.textContent = '个字'
+        } else {
+            bankCountEl.textContent = Storage.getMemorizedPoemCount()
+            bankUnitEl.textContent = '首诗词'
+        }
+
         if (tab === 'poembank') this.renderPoemBank()
         else this.renderWordBank()
     }
@@ -306,15 +328,43 @@ class App {
     // ========== 识字闯关 ==========
 
     startWordTest() {
-        const words = Storage.getWordBank()
+        const allWords = Storage.getWordBank()
         const count = parseInt(document.getElementById('test-count').value)
 
-        if (words.length < count) {
+        if (allWords.length < count) {
             this.showToast('字库字数不够，先多学几个字吧！')
             return
         }
 
-        this.testWords = this._shuffleArray([...words]).slice(0, count)
+        // 获取最近 3 次测试考过的字，优先选未考或久未考的字
+        const recentWords = Storage.getRecentTestWords()
+
+        // 将字分为两组：最近考过的和未考过的
+        const recentSet = new Set(recentWords)
+        const untestedWords = allWords.filter(w => !recentSet.has(w))
+        const testedWords = allWords.filter(w => recentSet.has(w))
+
+        // 优先从未考过的字中抽取
+        let shuffled
+        if (untestedWords.length >= count) {
+            // 未考过的字足够，只从未考过的里面选
+            shuffled = this._shuffleArray([...untestedWords]).slice(0, count)
+        } else if (untestedWords.length > 0) {
+            // 未考过的字不够，全部加上，再从考过的里面补
+            const remaining = count - untestedWords.length
+            shuffled = [...untestedWords, ...this._shuffleArray([...testedWords]).slice(0, remaining)]
+        } else {
+            // 所有字都考过，从最近考过的里面随机选（尽量选最早考的）
+            // 按 timestamp 排序，早考的优先
+            const sortedTested = [...allWords].sort((a, b) => {
+                const aTime = recentWords.indexOf(a)
+                const bTime = recentWords.indexOf(b)
+                return aTime - bTime  // 早考的（索引小）优先
+            })
+            shuffled = sortedTested.slice(0, count)
+        }
+
+        this.testWords = shuffled
         this.currentQuestion = 0
         this.score = 0
 
@@ -356,7 +406,8 @@ class App {
         document.getElementById('final-score').textContent = this.score
         document.getElementById('total-score').textContent = total
 
-        const result = Storage.saveTestScore(this.score, total)
+        // 保存成绩时记录本次测试的字
+        const result = Storage.saveTestScore(this.score, total, this.testWords)
         const level = Storage.getUltramanLevel()
         const heroName = HERO_CONFIG[level] ? HERO_CONFIG[level].name : '奥特曼'
 
@@ -400,30 +451,61 @@ class App {
         this.showPoemQuestion()
     }
 
-    // 生成诗词题目：每个（诗，行，方向）唯一，同一行的 next/prev 不同时出现
+    // 诗词轮询策略：优先选最久没考的诗，诗句随机选
     _buildPoemQuestions(poems, count) {
-        // 先生成每个相邻行对的候选（next 和 prev 视为同一行对，随机选一个方向）
-        const linePairs = []
+        const now = Date.now()
+        const questions = []
+
+        // 初始化没有进度的诗
         poems.forEach(poem => {
-            if (poem.lines.length < 2) return
-            for (let i = 0; i < poem.lines.length - 1; i++) {
-                linePairs.push({ poem, i })
+            if (!Storage.data.profile.poemProgress[poem.id]) {
+                Storage.data.profile.poemProgress[poem.id] = {
+                    lastTestedAt: 0  // 从未考过的优先
+                }
             }
         })
 
-        if (linePairs.length === 0) return []
+        // 生成题目：每次选最久没考的诗
+        for (let i = 0; i < count; i++) {
+            // 按 lastTestedAt 排序，选最久没考的
+            const sortedPoems = [...poems].sort((a, b) => {
+                const aTime = Storage.data.profile.poemProgress[a.id]?.lastTestedAt || 0
+                const bTime = Storage.data.profile.poemProgress[b.id]?.lastTestedAt || 0
+                return aTime - bTime
+            })
 
-        // 打乱行对顺序，避免每次都从同一首诗开始
-        const shuffled = this._shuffleArray([...linePairs])
+            const poem = sortedPoems[0]
+            const poemLines = poem.lines
 
-        // 取前 count 个行对，每对随机决定方向
-        const selected = shuffled.slice(0, count)
-        return selected.map(({ poem, i }) => {
-            const useNext = Math.random() < 0.5
-            return useNext
-                ? { poemId: poem.id, poemTitle: poem.title, direction: 'next', promptLine: poem.lines[i],     answerLine: poem.lines[i + 1] }
-                : { poemId: poem.id, poemTitle: poem.title, direction: 'prev', promptLine: poem.lines[i + 1], answerLine: poem.lines[i] }
-        })
+            // 随机选一句
+            const lineIndex = Math.floor(Math.random() * poemLines.length)
+            const line = poemLines[lineIndex]
+
+            // 奇偶规则：偶数索引问下一句，奇数索引问上一句
+            // 边界：如果是最后一句且是偶数索引，改为问上一句
+            const isLastLine = lineIndex === poemLines.length - 1
+            const askNext = (lineIndex % 2 === 0) && !isLastLine
+
+            const direction = askNext ? 'next' : 'prev'
+            const promptLine = line
+            const answerLine = askNext
+                ? poemLines[lineIndex + 1]
+                : poemLines[lineIndex - 1]
+
+            questions.push({
+                poemId: poem.id,
+                poemTitle: poem.title,
+                direction,
+                promptLine,
+                answerLine
+            })
+
+            // 更新这首诗的_lastTestedAt
+            Storage.data.profile.poemProgress[poem.id].lastTestedAt = now + i
+        }
+
+        Storage.saveAll()
+        return questions
     }
 
     showPoemQuestion() {
@@ -606,7 +688,8 @@ class App {
 
     _renderCardGrids() {
         const totalUnique = Storage.getTotalUniqueCards()
-        document.getElementById('card-count-label').textContent = `(${totalUnique}/55)`
+        const totalCards = Object.keys(CARD_DATA).length + Object.keys(POEM_CARD_DATA).length
+        document.getElementById('card-count-label').textContent = `(${totalUnique}/${totalCards})`
 
         // 合并两个卡池，按类型分组
         const allCards = { ...CARD_DATA, ...POEM_CARD_DATA }

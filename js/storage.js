@@ -170,6 +170,8 @@ const Storage = {
             totalCardsCollected: 0,
             wordMilestones: [],
             unlockedBadges: [],
+            lastWordQuestions: [],  // 最近 3 次识字测试的字 [{ word, timestamp }]
+            poemProgress: {},       // 诗词轮询进度 { poemId: { nextLineIndex, lastTestedAt } }
         },
         settings: {
             initialStudyDays: 200
@@ -292,13 +294,23 @@ const Storage = {
     },
 
     // 识字闯关结果，返回 { isPerfect, cardAwarded, newBadges }
-    saveTestScore(score, total) {
+    saveTestScore(score, total, testWords = []) {
         const today = this.getToday()
         today.score = { score, total, timestamp: Date.now() }
 
         this.data.profile.totalTests = (this.data.profile.totalTests || 0) + 1
         const isPerfect = score === total
         this._updateStreak()
+
+        // 记录本次测试的字，保留最近 3 次
+        if (testWords.length > 0) {
+            const now = Date.now()
+            const newQuestions = testWords.map(word => ({ word, timestamp: now }))
+            const existing = this.data.profile.lastWordQuestions || []
+            const updated = [...existing, ...newQuestions]
+            // 只保留最近 3 次测试的字（假设每次最多 20 题，约 60 条记录）
+            this.data.profile.lastWordQuestions = updated.slice(-60)
+        }
 
         let cardAwarded = null
         if (isPerfect) {
@@ -313,6 +325,12 @@ const Storage = {
         const newBadges = this._checkBadges()
         this.autoSave()
         return { isPerfect, cardAwarded, newBadges }
+    },
+
+    // 获取最近 3 次测试考过的字（用于去重）
+    getRecentTestWords() {
+        const questions = this.data.profile.lastWordQuestions || []
+        return questions.map(q => q.word)
     },
 
     // 古诗词闯关结果，返回 { isPerfect, cardAwarded, newBadges }
