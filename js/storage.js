@@ -178,6 +178,7 @@ const Storage = {
         }
     },
     isInitialized: false,
+    _cloudWordBankCount: 0,
 
     async init() {
         const cloudData = await loadFromCloud()
@@ -195,6 +196,18 @@ const Storage = {
                 this.data.profile.lastWordCardDate = this.data.profile.lastCardDate
                 delete this.data.profile.lastCardDate
             }
+            this._cloudWordBankCount = cloudData.wordBank.length
+            // 云端加载成功后自动存一份本地快照
+            try {
+                localStorage.setItem('doubao_backup', JSON.stringify({
+                    savedAt: new Date().toISOString(),
+                    wordCount: cloudData.wordBank.length,
+                    data: this.data
+                }))
+                console.log(`本地备份已更新（${cloudData.wordBank.length} 个字）`)
+            } catch (e) {
+                console.warn('本地备份失败:', e)
+            }
             console.log('已从云端加载数据')
         }
         // 始终根据识字量和古诗词数量重新计算等级
@@ -205,6 +218,10 @@ const Storage = {
     },
 
     async saveAll() {
+        if (this.data.wordBank.length === 0 && this._cloudWordBankCount > 0) {
+            console.warn(`安全保护：本地 wordBank 为空但云端有 ${this._cloudWordBankCount} 个字，已阻止同步`)
+            return
+        }
         await syncToCloud(this.data)
     },
 
@@ -461,8 +478,17 @@ const Storage = {
         else rarity = 'common'
 
         const source = pool === 'poem' ? POEM_CARD_DATA : CARD_DATA
-        const candidates = Object.keys(source).filter(id => source[id].rarity === rarity)
-        if (candidates.length === 0) return null
+        const collectedCards = this.data.profile.collectedCards || []
+        const notCapped = id => {
+            const c = collectedCards.find(c => c.id === id)
+            return !c || c.count < 2
+        }
+
+        let candidates = Object.keys(source).filter(id => source[id].rarity === rarity && notCapped(id))
+        // 该稀有度已全满，从所有剩余可获取卡片中随机
+        if (candidates.length === 0) candidates = Object.keys(source).filter(notCapped)
+        if (candidates.length === 0) return null  // 全部卡片已达上限
+
         const cardId = candidates[Math.floor(Math.random() * candidates.length)]
         this._addCollectedCard(cardId)
         return cardId
@@ -719,10 +745,21 @@ const Storage = {
     },
 
     clearAll() {
+        this._cloudWordBankCount = 0  // 允许写入空数据到云端
         this.data.wordBank = []
         this.data.records = {}
         this.data.poems = []
         this.autoSave()
+    },
+
+    getLocalBackup() {
+        try {
+            const raw = localStorage.getItem('doubao_backup')
+            if (!raw) return null
+            return JSON.parse(raw)
+        } catch (e) {
+            return null
+        }
     },
 
     async beforeUnload() {
