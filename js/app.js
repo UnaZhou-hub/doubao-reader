@@ -22,6 +22,9 @@ class App {
 
     async init() {
         await Storage.init()
+        const overlay = document.getElementById('loading-overlay')
+        overlay.classList.add('hidden')
+        overlay.addEventListener('transitionend', () => overlay.remove(), { once: true })
         this.bindEvents()
         this.updateUI()
     }

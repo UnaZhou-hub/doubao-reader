@@ -179,10 +179,12 @@ const Storage = {
     },
     isInitialized: false,
     _cloudWordBankCount: 0,
+    _cloudLoadSucceeded: false,
 
     async init() {
         const cloudData = await loadFromCloud()
         if (cloudData) {
+            this._cloudLoadSucceeded = true
             const defaultProfile = { ...this.data.profile }
             this.data = {
                 wordBank: cloudData.wordBank,
@@ -218,6 +220,14 @@ const Storage = {
     },
 
     async saveAll() {
+        if (!this.isInitialized) {
+            console.warn('安全保护：数据尚未初始化完成，已阻止同步')
+            return
+        }
+        if (this.data.wordBank.length === 0 && !this._cloudLoadSucceeded) {
+            console.warn('安全保护：云端加载失败且本地数据为空，已阻止同步')
+            return
+        }
         if (this.data.wordBank.length === 0 && this._cloudWordBankCount > 0) {
             console.warn(`安全保护：本地 wordBank 为空但云端有 ${this._cloudWordBankCount} 个字，已阻止同步`)
             return
@@ -745,7 +755,8 @@ const Storage = {
     },
 
     clearAll() {
-        this._cloudWordBankCount = 0  // 允许写入空数据到云端
+        this._cloudWordBankCount = 0
+        this._cloudLoadSucceeded = true  // 明确授权写入空数据到云端
         this.data.wordBank = []
         this.data.records = {}
         this.data.poems = []
