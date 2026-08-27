@@ -27,6 +27,12 @@ class App {
         overlay.addEventListener('transitionend', () => overlay.remove(), { once: true })
         this.bindEvents()
         this.updateUI()
+        if (Storage.restoredFrom) {
+            const count = Storage.getWordBank().length
+            this.showToast(Storage.restoredFrom === 'legacy'
+                ? `已从本机旧备份恢复（${count} 个字）`
+                : `已从内置快照恢复（${count} 个字），如有更新请手动导入`)
+        }
     }
 
     bindEvents() {

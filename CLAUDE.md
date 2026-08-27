@@ -21,27 +21,28 @@ Deployment is via Netlify (auto-deploys on `git push origin main`). No build com
 
 Pure vanilla JavaScript — no bundler, framework, or package manager. Three source files:
 
-- **`js/storage.js`** — Data layer: Supabase sync, all static data (card definitions, badge definitions, hero configs), and the `Storage` object that owns all app state.
+- **`js/storage.js`** — Data layer: localStorage persistence, all static data (card definitions, badge definitions, hero configs), and the `Storage` object that owns all app state.
 - **`js/app.js`** — UI layer: page switching, event binding, rendering, animations, quiz logic. Calls into `Storage` for all reads/writes.
 - **`css/style.css`** — All styling including SVG-based card rendering, level-up animations, and hero-specific color themes.
-- **`index.html`** — App shell with 4 page sections (`record`, `wordbank`, `test`, `achievement`) and modal overlays. Loads Supabase SDK via CDN, then `storage.js`, then `app.js`.
+- **`index.html`** — App shell with 4 page sections (`record`, `wordbank`, `test`, `achievement`) and modal overlays. Loads `storage.js`, then `app.js`.
 
-## Data & Cloud Sync
+## Data Storage
 
-All data lives in a single Supabase table `doubao_data`, keyed by `device_id = 'doubao-family'` so all family devices share the same state. Data is stored as JSONB columns: `word_bank`, `records`, `profile`, `settings`.
+All data lives in the browser's localStorage under the key `doubao_data`, as one JSON blob. Storage is per-device — there is no cloud sync, so the export/import buttons on the 百宝箱 page are the only way to move data between devices or recover from a cleared browser.
 
 The `Storage.data` object is the single source of truth in memory:
 
 ```javascript
 Storage.data = {
   wordBank: [],       // learned characters
-  records: [],        // test history
-  profile: { ... },  // level, cards, badges, streaks
+  records: {},        // test history keyed by date
+  poems: [],          // memorized poems
+  profile: { ... },   // level, cards, badges, streaks
   settings: { ... }
 }
 ```
 
-`Storage.saveAll()` upserts to Supabase. `Storage.init()` loads from Supabase on startup. Supabase credentials (public anon key) are hardcoded in `storage.js` — this is intentional since RLS policies allow public read/write.
+`Storage.saveAll()` writes it to localStorage; `Storage.init()` reads it back on startup. When `doubao_data` is missing, `init()` falls back in order to `doubao_backup` (the snapshot the old Supabase version left behind) and then `data.json` (a snapshot committed to the repo), writes whichever it found to `doubao_data`, and sets `Storage.restoredFrom` so the UI can say where the data came from.
 
 ## Key Domain Concepts
 

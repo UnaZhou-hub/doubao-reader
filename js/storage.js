@@ -1,11 +1,7 @@
-// ========== Supabase 云同步配置 ==========
-const SUPABASE_URL = 'https://pcrnnhwkbtbspppovxru.supabase.co'
-const SUPABASE_KEY = 'sb_publishable_t7dgz22Yqd58Dx1isGi1aQ_FWlIlZJ2'
-
-const { createClient } = supabase
-const supabaseClient = createClient(SUPABASE_URL, SUPABASE_KEY)
-
-const FAMILY_ID = 'doubao-family'
+// ========== 本地存储配置 ==========
+const STORAGE_KEY = 'doubao_data'
+const LEGACY_BACKUP_KEY = 'doubao_backup'   // 云端版本留下的本地快照，仅用于一次性迁移
+const SEED_FILE = 'data.json'               // 本机没有任何数据时的兜底快照
 
 // ========== 识字卡片数据（识字闯关卡池）==========
 const CARD_DATA = {
@@ -109,44 +105,41 @@ function getTodayStr() {
     return `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}`
 }
 
-// ========== 云同步 ==========
-async function syncToCloud(data) {
+// ========== 本地读写 ==========
+function saveToLocal(data) {
     try {
-        const { error } = await supabaseClient.from('doubao_data').upsert({
-            device_id: FAMILY_ID,
-            word_bank: data.wordBank,
-            records: data.records,
-            profile: data.profile,
-            settings: data.settings,
-            poems: data.poems,
-            updated_at: new Date().toISOString()
-        }, { onConflict: 'device_id' })
-        if (error) console.error('云同步失败:', error)
-        else console.log('已同步到云端')
+        localStorage.setItem(STORAGE_KEY, JSON.stringify(data))
+        console.log('已保存到本机')
     } catch (e) {
-        console.error('云同步异常:', e)
+        console.error('本地保存失败（可能是存储空间已满或处于隐私模式）:', e)
     }
 }
 
-async function loadFromCloud() {
+// 返回 { source, data }，source 为 local / legacy / seed
+async function loadFromLocal() {
     try {
-        const { data, error } = await supabaseClient
-            .from('doubao_data')
-            .select('*')
-            .eq('device_id', FAMILY_ID)
-            .single()
-        if (error || !data) return null
-        return {
-            wordBank: data.word_bank || [],
-            records: data.records || {},
-            profile: data.profile || {},
-            settings: data.settings || {},
-            poems: data.poems || [],
+        const raw = localStorage.getItem(STORAGE_KEY)
+        if (raw) return { source: 'local', data: JSON.parse(raw) }
+    } catch (e) {
+        console.error('本地数据损坏，无法读取:', e)
+        return null   // 不再往下找，避免用旧快照覆盖掉可能还能人工抢救的数据
+    }
+    try {
+        const legacy = localStorage.getItem(LEGACY_BACKUP_KEY)
+        if (legacy) {
+            const parsed = JSON.parse(legacy)
+            if (parsed && parsed.data) return { source: 'legacy', data: parsed.data }
         }
     } catch (e) {
-        console.error('从云端加载失败:', e)
-        return null
+        console.warn('旧备份读取失败:', e)
     }
+    try {
+        const res = await fetch(SEED_FILE, { cache: 'no-store' })
+        if (res.ok) return { source: 'seed', data: await res.json() }
+    } catch (e) {
+        console.warn('内置快照加载失败:', e)
+    }
+    return null
 }
 
 // ========== 存储管理 ==========
@@ -178,61 +171,49 @@ const Storage = {
         }
     },
     isInitialized: false,
-    _cloudWordBankCount: 0,
-    _cloudLoadSucceeded: false,
+    restoredFrom: null,      // 'legacy' / 'seed'：本次启动是从旧备份或内置快照恢复的
+    _loadedWordBankCount: 0,
 
     async init() {
-        const cloudData = await loadFromCloud()
-        if (cloudData) {
-            this._cloudLoadSucceeded = true
+        const loaded = await loadFromLocal()
+        if (loaded) {
+            const saved = loaded.data
             const defaultProfile = { ...this.data.profile }
             this.data = {
-                wordBank: cloudData.wordBank,
-                records: cloudData.records,
-                poems: cloudData.poems || [],
-                profile: { ...defaultProfile, ...cloudData.profile },
-                settings: { ...this.data.settings, ...cloudData.settings }
+                wordBank: saved.wordBank || [],
+                records: saved.records || {},
+                poems: saved.poems || [],
+                profile: { ...defaultProfile, ...(saved.profile || {}) },
+                settings: { ...this.data.settings, ...(saved.settings || {}) }
             }
             // 迁移旧的 lastCardDate 字段
             if (this.data.profile.lastCardDate && !this.data.profile.lastWordCardDate) {
                 this.data.profile.lastWordCardDate = this.data.profile.lastCardDate
                 delete this.data.profile.lastCardDate
             }
-            this._cloudWordBankCount = cloudData.wordBank.length
-            // 云端加载成功后自动存一份本地快照
-            try {
-                localStorage.setItem('doubao_backup', JSON.stringify({
-                    savedAt: new Date().toISOString(),
-                    wordCount: cloudData.wordBank.length,
-                    data: this.data
-                }))
-                console.log(`本地备份已更新（${cloudData.wordBank.length} 个字）`)
-            } catch (e) {
-                console.warn('本地备份失败:', e)
-            }
-            console.log('已从云端加载数据')
+            this._loadedWordBankCount = this.data.wordBank.length
+            if (loaded.source !== 'local') this.restoredFrom = loaded.source
+            console.log(`已加载数据（来源：${loaded.source}，${this.data.wordBank.length} 个字）`)
         }
         // 始终根据识字量和古诗词数量重新计算等级
         const poemCount = this._getMemorizedPoemCount()
         this.data.profile.currentLevel = getUltramanLevel(this.data.wordBank.length, poemCount)
         this.isInitialized = true
+        // 旧备份/内置快照只是来源，落到正式存储后下次就直接读本机数据
+        if (this.restoredFrom) saveToLocal(this.data)
         return true
     },
 
-    async saveAll() {
+    saveAll() {
         if (!this.isInitialized) {
-            console.warn('安全保护：数据尚未初始化完成，已阻止同步')
+            console.warn('安全保护：数据尚未初始化完成，已阻止保存')
             return
         }
-        if (this.data.wordBank.length === 0 && !this._cloudLoadSucceeded) {
-            console.warn('安全保护：云端加载失败且本地数据为空，已阻止同步')
+        if (this.data.wordBank.length === 0 && this._loadedWordBankCount > 0) {
+            console.warn(`安全保护：内存中 wordBank 为空但已存有 ${this._loadedWordBankCount} 个字，已阻止保存`)
             return
         }
-        if (this.data.wordBank.length === 0 && this._cloudWordBankCount > 0) {
-            console.warn(`安全保护：本地 wordBank 为空但云端有 ${this._cloudWordBankCount} 个字，已阻止同步`)
-            return
-        }
-        await syncToCloud(this.data)
+        saveToLocal(this.data)
     },
 
     autoSave() {
@@ -755,31 +736,20 @@ const Storage = {
     },
 
     clearAll() {
-        this._cloudWordBankCount = 0
-        this._cloudLoadSucceeded = true  // 明确授权写入空数据到云端
+        this._loadedWordBankCount = 0  // 明确授权保存空数据
         this.data.wordBank = []
         this.data.records = {}
         this.data.poems = []
         this.autoSave()
     },
 
-    getLocalBackup() {
-        try {
-            const raw = localStorage.getItem('doubao_backup')
-            if (!raw) return null
-            return JSON.parse(raw)
-        } catch (e) {
-            return null
-        }
-    },
-
-    async beforeUnload() {
-        await this.saveAll()
+    beforeUnload() {
+        this.saveAll()
         return true
     }
 }
 
-window.addEventListener('beforeunload', async () => { await Storage.beforeUnload() })
-document.addEventListener('visibilitychange', async () => {
-    if (document.visibilityState === 'hidden') await Storage.beforeUnload()
+window.addEventListener('beforeunload', () => { Storage.beforeUnload() })
+document.addEventListener('visibilitychange', () => {
+    if (document.visibilityState === 'hidden') Storage.beforeUnload()
 })
